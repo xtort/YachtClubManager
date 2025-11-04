@@ -77,9 +77,9 @@
                                     <p class="text-muted small mb-1">
                                         <i class="bi bi-envelope"></i> {{ contact.member.email }}
                                     </p>
-                                    {% if contact.member.phone_number %}
+                                    {% if contact.member.primary_phone_number %}
                                         <p class="text-muted small mb-1">
-                                            <i class="bi bi-telephone"></i> {{ contact.member.phone_number }}
+                                            <i class="bi bi-telephone"></i> {{ contact.member.primary_phone_number }}
                                         </p>
                                     {% endif %}
                                     {% if contact.responsibilities %}

@@ -244,7 +244,7 @@ class ClubUser(AbstractBaseUser, PermissionsMixin):
         regex=r'^\+?1?\d{9,15}$',
         message="Phone number must be entered in the format: '+999999999'. Up to 15 digits allowed."
     )
-    phone_number = models.CharField(validators=[phone_regex], max_length=17, blank=True)
+    primary_phone_number = models.CharField(validators=[phone_regex], max_length=17, blank=True)
     
     # Spouse Information
     spouse_first_name = models.CharField(max_length=150, blank=True)
@@ -258,7 +258,7 @@ class ClubUser(AbstractBaseUser, PermissionsMixin):
     state = models.CharField(max_length=2, choices=US_STATES, blank=True)
     zip_code = models.CharField(max_length=20, blank=True)
     timezone = models.CharField(max_length=50, blank=True, help_text='e.g., America/New_York')
-    primary_phone = models.CharField(validators=[phone_regex], max_length=17, blank=True)
+    secondary_phone_number = models.CharField(validators=[phone_regex], max_length=17, blank=True)
     
     # Work Information
     company = models.CharField(max_length=255, blank=True)

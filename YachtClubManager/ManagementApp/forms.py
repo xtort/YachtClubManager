@@ -68,12 +68,12 @@ class ClubUserCreateForm(forms.ModelForm):
 
     class Meta:
         model = ClubUser
-        fields = ['email', 'first_name', 'last_name', 'phone_number', 'role', 'is_active']
+        fields = ['email', 'first_name', 'last_name', 'primary_phone_number', 'role', 'is_active']
         widgets = {
             'email': forms.EmailInput(attrs={'class': 'form-control'}),
             'first_name': forms.TextInput(attrs={'class': 'form-control'}),
             'last_name': forms.TextInput(attrs={'class': 'form-control'}),
-            'phone_number': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '+1234567890'}),
+            'primary_phone_number': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '+1234567890'}),
             'role': forms.Select(attrs={'class': 'form-control'}),
             'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
@@ -81,7 +81,7 @@ class ClubUserCreateForm(forms.ModelForm):
             'email': 'Email Address',
             'first_name': 'First Name',
             'last_name': 'Last Name',
-            'phone_number': 'Phone Number',
+            'primary_phone_number': 'Primary Phone Number',
             'role': 'Role',
             'is_active': 'Active',
         }
@@ -123,12 +123,12 @@ class ClubUserUpdateForm(forms.ModelForm):
 
     class Meta:
         model = ClubUser
-        fields = ['email', 'first_name', 'last_name', 'phone_number', 'role', 'is_active']
+        fields = ['email', 'first_name', 'last_name', 'primary_phone_number', 'role', 'is_active']
         widgets = {
             'email': forms.EmailInput(attrs={'class': 'form-control'}),
             'first_name': forms.TextInput(attrs={'class': 'form-control'}),
             'last_name': forms.TextInput(attrs={'class': 'form-control'}),
-            'phone_number': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '+1234567890'}),
+            'primary_phone_number': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '+1234567890'}),
             'role': forms.Select(attrs={'class': 'form-control'}),
             'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
@@ -136,7 +136,7 @@ class ClubUserUpdateForm(forms.ModelForm):
             'email': 'Email Address',
             'first_name': 'First Name',
             'last_name': 'Last Name',
-            'phone_number': 'Phone Number',
+            'primary_phone_number': 'Primary Phone Number',
             'role': 'Role',
             'is_active': 'Active',
         }
@@ -180,17 +180,24 @@ class ProfileUpdateForm(forms.ModelForm):
         widget=forms.PasswordInput(attrs={'class': 'form-control'}),
         required=False
     )
+    # Override timezone field to use ChoiceField since model field doesn't have choices
+    timezone = forms.ChoiceField(
+        choices=TIMEZONE_CHOICES,
+        widget=forms.Select(attrs={'class': 'form-control'}),
+        required=True,
+        label='Timezone'
+    )
 
     class Meta:
         model = ClubUser
         fields = [
             # General Information
             'salutation', 'first_name', 'middle_initial', 'last_name', 'professional_designation',
-            'date_of_birth', 'nickname', 'phone_number', 'email',
+            'date_of_birth', 'nickname', 'primary_phone_number', 'email',
             # Spouse Information
             'spouse_first_name', 'spouse_last_name',
             # Primary Address
-            'country', 'address1', 'address2', 'city', 'state', 'zip_code', 'timezone', 'primary_phone',
+            'country', 'address1', 'address2', 'city', 'state', 'zip_code', 'timezone', 'secondary_phone_number',
             # Work Information
             'company', 'occupation_title', 'work_phone',
             # Vessel Information
@@ -201,39 +208,39 @@ class ProfileUpdateForm(forms.ModelForm):
         ]
         widgets = {
             # General Information
-            'salutation': forms.Select(attrs={'class': 'form-control'}, choices=SALUTATION_CHOICES),
+            'salutation': forms.Select(attrs={'class': 'form-control'}),
             'first_name': forms.TextInput(attrs={'class': 'form-control'}),
             'middle_initial': forms.TextInput(attrs={'class': 'form-control', 'maxlength': '1', 'style': 'width: 60px;'}),
             'last_name': forms.TextInput(attrs={'class': 'form-control'}),
             'professional_designation': forms.TextInput(attrs={'class': 'form-control'}),
-            'date_of_birth': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'date_of_birth': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}, format='%Y-%m-%d'),
             'nickname': forms.TextInput(attrs={'class': 'form-control'}),
-            'phone_number': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '+1234567890'}),
+            'primary_phone_number': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '+1234567890'}),
             'email': forms.EmailInput(attrs={'class': 'form-control'}),
             # Spouse Information
             'spouse_first_name': forms.TextInput(attrs={'class': 'form-control'}),
             'spouse_last_name': forms.TextInput(attrs={'class': 'form-control'}),
             # Primary Address
-            'country': forms.Select(attrs={'class': 'form-control'}, choices=COUNTRIES),
+            'country': forms.Select(attrs={'class': 'form-control'}),
             'address1': forms.TextInput(attrs={'class': 'form-control'}),
             'address2': forms.TextInput(attrs={'class': 'form-control'}),
             'city': forms.TextInput(attrs={'class': 'form-control'}),
-            'state': forms.Select(attrs={'class': 'form-control'}, choices=US_STATES),
+            'state': forms.Select(attrs={'class': 'form-control'}),
             'zip_code': forms.TextInput(attrs={'class': 'form-control'}),
-            'timezone': forms.Select(attrs={'class': 'form-control'}, choices=TIMEZONE_CHOICES),
-            'primary_phone': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '+1234567890'}),
+            # timezone is defined as ChoiceField above, so don't include widget here
+            'secondary_phone_number': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '+1234567890'}),
             # Work Information
             'company': forms.TextInput(attrs={'class': 'form-control'}),
             'occupation_title': forms.TextInput(attrs={'class': 'form-control'}),
             'work_phone': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '+1234567890'}),
             # Vessel Information
-            'vessel_type': forms.Select(attrs={'class': 'form-control'}, choices=VESSEL_TYPE_CHOICES),
+            'vessel_type': forms.Select(attrs={'class': 'form-control'}),
             'vessel_name': forms.TextInput(attrs={'class': 'form-control'}),
             'vessel_loa': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.1', 'placeholder': '32.0'}),
             'vessel_beam': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.1', 'placeholder': '14.5'}),
             'vessel_draft': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.1', 'placeholder': '3.4'}),
-            'vessel_power_requirements': forms.Select(attrs={'class': 'form-control'}, choices=VESSEL_POWER_CHOICES),
-            'vessel_tie_preferences': forms.Select(attrs={'class': 'form-control'}, choices=VESSEL_TIE_CHOICES),
+            'vessel_power_requirements': forms.Select(attrs={'class': 'form-control'}),
+            'vessel_tie_preferences': forms.Select(attrs={'class': 'form-control'}),
             # Photos
             'member_photo': forms.FileInput(attrs={'class': 'form-control', 'accept': 'image/*'}),
             'vessel_photo': forms.FileInput(attrs={'class': 'form-control', 'accept': 'image/*'}),
@@ -247,7 +254,7 @@ class ProfileUpdateForm(forms.ModelForm):
             'professional_designation': 'Professional Designation',
             'date_of_birth': 'Date of Birth',
             'nickname': 'Nickname',
-            'phone_number': 'Phone Number',
+            'primary_phone_number': 'Primary Phone Number',
             'email': 'Email Address',
             # Spouse Information
             'spouse_first_name': 'Spouse First Name',
@@ -260,7 +267,7 @@ class ProfileUpdateForm(forms.ModelForm):
             'state': 'State',
             'zip_code': 'Zip Code',
             'timezone': 'Timezone',
-            'primary_phone': 'Primary Phone',
+            'secondary_phone_number': 'Secondary Phone Number',
             # Work Information
             'company': 'Company',
             'occupation_title': 'Occupation/Title',
@@ -284,6 +291,15 @@ class ProfileUpdateForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        # Set choices for Select fields (must be done after super() to ensure instance is populated)
+        self.fields['salutation'].choices = SALUTATION_CHOICES
+        self.fields['country'].choices = COUNTRIES
+        self.fields['state'].choices = US_STATES
+        # Timezone is already a ChoiceField, so it has choices set
+        self.fields['vessel_type'].choices = VESSEL_TYPE_CHOICES
+        self.fields['vessel_power_requirements'].choices = VESSEL_POWER_CHOICES
+        self.fields['vessel_tie_preferences'].choices = VESSEL_TIE_CHOICES
+        
         # Mark required fields
         self.fields['first_name'].required = True
         self.fields['last_name'].required = True
@@ -292,7 +308,7 @@ class ProfileUpdateForm(forms.ModelForm):
         self.fields['city'].required = True
         self.fields['state'].required = True
         self.fields['zip_code'].required = True
-        self.fields['timezone'].required = True
+        # timezone is already required=True in field definition above
 
     def clean_email(self):
         email = self.cleaned_data.get('email')

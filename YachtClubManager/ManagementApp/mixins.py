@@ -37,3 +37,18 @@ class EventDeleteRequiredMixin(RoleRequiredMixin):
     """Mixin for views that require event deletion permissions"""
     required_permission = 'delete_events'
 
+
+class MemberDirectoryRequiredMixin(AccessMixin):
+    """Mixin for views that require member directory access (members, editors, admins, but not viewers)"""
+    
+    def dispatch(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return self.handle_no_permission()
+        
+        # Check if user has viewer role (which should NOT have access)
+        if request.user.role and request.user.role.name == 'viewer':
+            raise PermissionDenied("You don't have permission to access the member directory.")
+        
+        # All other authenticated users (members, editors, admins, superusers) can access
+        return super().dispatch(request, *args, **kwargs)
+

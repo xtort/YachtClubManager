@@ -89,7 +89,7 @@ class Command(BaseCommand):
                 password=password,
                 first_name=first_name,
                 last_name=last_name,
-                phone_number=phone or '',
+                primary_phone_number=phone or '',
                 role=role,
                 is_active=True
             )

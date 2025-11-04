@@ -1,0 +1,174 @@
+{% extends 'CalendarApp/base.html' %}
+{% load event_permissions %}
+
+{% block title %}Members Directory - Yacht Club Manager{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1><i class="bi bi-people"></i> Members Directory</h1>
+        <a href="{% url 'calendar:calendar' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Back to Calendar
+        </a>
+    </div>
+
+    <!-- Search Form -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-10">
+                    <input type="text" 
+                           name="search" 
+                           class="form-control form-control-lg" 
+                           placeholder="Search by name, email, nickname, phone, or vessel name..." 
+                           value="{{ search_query }}">
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary btn-lg w-100">
+                        <i class="bi bi-search"></i> Search
+                    </button>
+                </div>
+                {% if search_query %}
+                    <div class="col-12">
+                        <a href="{% url 'management:members_directory' %}" class="btn btn-outline-secondary btn-sm">
+                            <i class="bi bi-x-circle"></i> Clear Search
+                        </a>
+                        <span class="text-muted ms-2">Found {{ members|length }} member(s) matching "{{ search_query }}"</span>
+                    </div>
+                {% endif %}
+            </form>
+        </div>
+    </div>
+
+    {% if members %}
+        <div class="row">
+            {% for member in members %}
+                <div class="col-md-6 col-lg-4 mb-4">
+                    <div class="card h-100 member-card">
+                        <div class="card-body">
+                            <div class="text-center mb-3">
+                                {% if member.member_photo %}
+                                    <img src="{{ member.member_photo.url }}" 
+                                         alt="{{ member.get_full_name }}" 
+                                         class="rounded-circle mb-2" 
+                                         style="width: 100px; height: 100px; object-fit: cover;">
+                                {% else %}
+                                    <div class="rounded-circle bg-secondary d-inline-flex align-items-center justify-content-center mb-2" 
+                                         style="width: 100px; height: 100px;">
+                                        <i class="bi bi-person-fill text-white" style="font-size: 3rem;"></i>
+                                    </div>
+                                {% endif %}
+                                <h5 class="card-title mb-1">
+                                    {{ member.get_display_name|default:member.get_full_name }}
+                                </h5>
+                                {% if member.nickname %}
+                                    <p class="text-muted small mb-1">"{{ member.nickname }}"</p>
+                                {% endif %}
+                                {% if member.role %}
+                                    <span class="badge bg-info">{{ member.role.get_name_display }}</span>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="member-info">
+                                <p class="mb-2">
+                                    <i class="bi bi-envelope"></i> 
+                                    <a href="mailto:{{ member.email }}">{{ member.email }}</a>
+                                </p>                                
+                                {% if member.primary_phone_number %}
+                                    <p class="mb-2">
+                                        <i class="bi bi-telephone"></i> {{ member.primary_phone_number }}
+                                    </p>
+                                {% endif %}
+                                <p class="mb-2">
+                                    <i class="bi bi-geo-alt"></i> {{ member.address1 }} <br/> {% if member.address2 %} {{ member.address2 }} <br/> {% endif %} {{ member.city }}, {{ member.state }} {{ member.zip_code }}
+                                
+                                {% if member.vessel_name %}
+                                    <hr class="my-2">
+                                    <p class="mb-1">
+                                        <i class="bi bi-water"></i> <strong>Vessel:</strong> {{ member.vessel_name }}
+                                    </p>
+                                    {% if member.vessel_type %}
+                                        <p class="text-muted small mb-0">
+                                            {% if member.vessel_type == 'Motor' %}Motor{% elif member.vessel_type == 'Sailboat' %}Sailboat{% else %}{{ member.vessel_type }}{% endif %}
+                                        </p>
+                                    {% endif %}
+                                {% endif %}
+                                
+                                {% if member.company %}
+                                    <hr class="my-2">
+                                    <p class="mb-1">
+                                        <i class="bi bi-briefcase"></i> {{ member.company }}
+                                    </p>
+                                    {% if member.occupation_title %}
+                                        <p class="text-muted small mb-0">{{ member.occupation_title }}</p>
+                                    {% endif %}
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% if member.vessel_photo %}
+                            <div class="card-footer bg-light">
+                                <img src="{{ member.vessel_photo.url }}" 
+                                     alt="{{ member.vessel_name }}" 
+                                     class="img-fluid rounded" 
+                                     style="max-height: 150px; width: 100%; object-fit: cover;">
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+
+        {% if is_paginated %}
+            <nav aria-label="Member directory pagination" class="mt-4">
+                <ul class="pagination justify-content-center">
+                    {% if page_obj.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page=1{% if search_query %}&search={{ search_query|urlencode }}{% endif %}">First</a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if search_query %}&search={{ search_query|urlencode }}{% endif %}">Previous</a>
+                        </li>
+                    {% endif %}
+                    
+                    <li class="page-item active">
+                        <span class="page-link">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+                    </li>
+                    
+                    {% if page_obj.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if search_query %}&search={{ search_query|urlencode }}{% endif %}">Next</a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if search_query %}&search={{ search_query|urlencode }}{% endif %}">Last</a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        {% endif %}
+    {% else %}
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle"></i> 
+            {% if search_query %}
+                No members found matching "{{ search_query }}". <a href="{% url 'management:members_directory' %}">View all members</a>
+            {% else %}
+                No members found.
+            {% endif %}
+        </div>
+    {% endif %}
+</div>
+
+<style>
+    .member-card {
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .member-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    }
+    .member-info p {
+        margin-bottom: 0.5rem;
+        font-size: 0.9rem;
+    }
+</style>
+{% endblock %}
+

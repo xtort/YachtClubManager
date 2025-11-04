@@ -7,7 +7,7 @@ from django.contrib.auth import get_user_model
 from django.core.exceptions import PermissionDenied
 from CalendarApp.models import EventCategory, Event
 from .forms import EventCategoryForm, ClubUserCreateForm, ClubUserUpdateForm, ProfileUpdateForm
-from .mixins import UserManagementRequiredMixin
+from .mixins import UserManagementRequiredMixin, MemberDirectoryRequiredMixin
 
 ClubUser = get_user_model()
 
@@ -160,7 +160,27 @@ class ClubUserListView(UserManagementRequiredMixin, ListView):
     paginate_by = 20
 
     def get_queryset(self):
-        return ClubUser.objects.select_related('role').order_by('last_name', 'first_name')
+        queryset = ClubUser.objects.select_related('role').order_by('last_name', 'first_name')
+        
+        # Search functionality
+        search_query = self.request.GET.get('search', '').strip()
+        if search_query:
+            from django.db.models import Q
+            queryset = queryset.filter(
+                Q(first_name__icontains=search_query) |
+                Q(last_name__icontains=search_query) |
+                Q(email__icontains=search_query) |
+                Q(nickname__icontains=search_query) |
+                Q(primary_phone_number__icontains=search_query) |
+                Q(vessel_name__icontains=search_query)
+            )
+        
+        return queryset
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['search_query'] = self.request.GET.get('search', '').strip()
+        return context
 
 
 class ClubUserCreateView(UserManagementRequiredMixin, CreateView):
@@ -212,6 +232,38 @@ class ClubUserDeleteView(UserManagementRequiredMixin, DeleteView):
         return super().form_valid(form)
 
 
+class MembersDirectoryView(MemberDirectoryRequiredMixin, ListView):
+    """View for members directory - accessible to members, editors, and admins (but not viewers)"""
+    model = ClubUser
+    template_name = 'ManagementApp/members_directory.html'
+    context_object_name = 'members'
+    paginate_by = 30
+
+    def get_queryset(self):
+        # Only show active members
+        queryset = ClubUser.objects.filter(is_active=True).select_related('role').order_by('last_name', 'first_name')
+        
+        # Search functionality
+        search_query = self.request.GET.get('search', '').strip()
+        if search_query:
+            from django.db.models import Q
+            queryset = queryset.filter(
+                Q(first_name__icontains=search_query) |
+                Q(last_name__icontains=search_query) |
+                Q(email__icontains=search_query) |
+                Q(nickname__icontains=search_query) |
+                Q(primary_phone_number__icontains=search_query) |
+                Q(vessel_name__icontains=search_query)
+            )
+        
+        return queryset
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['search_query'] = self.request.GET.get('search', '').strip()
+        return context
+
+
 # Profile Management Views (for users to manage their own profiles)
 class ProfileUpdateView(LoginRequiredMixin, UpdateView):
     """View for users to update their own profile"""
@@ -228,7 +280,12 @@ class ProfileUpdateView(LoginRequiredMixin, UpdateView):
     def get_form_kwargs(self):
         """Add request to form kwargs for file upload handling"""
         kwargs = super().get_form_kwargs()
-        kwargs.update({'files': self.request.FILES})
+        # Ensure instance is set (should already be set by UpdateView, but being explicit)
+        if 'instance' not in kwargs:
+            kwargs['instance'] = self.get_object()
+        # Only add files if this is a POST request (Django handles this automatically, but being explicit)
+        if self.request.method == 'POST':
+            kwargs['files'] = self.request.FILES
         return kwargs
 
     def form_valid(self, form):

@@ -16,6 +16,8 @@ urlpatterns = [
     path('users/create/', views.ClubUserCreateView.as_view(), name='user_create'),
     path('users/<int:pk>/edit/', views.ClubUserUpdateView.as_view(), name='user_edit'),
     path('users/<int:pk>/delete/', views.ClubUserDeleteView.as_view(), name='user_delete'),
+    # Member directory (accessible to members, editors, admins - not viewers)
+    path('members/', views.MembersDirectoryView.as_view(), name='members_directory'),
     # Profile management (for all authenticated users)
     path('profile/', views.ProfileUpdateView.as_view(), name='profile'),
 ]

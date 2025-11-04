@@ -42,16 +42,16 @@ class RoleAdmin(admin.ModelAdmin):
 
 @admin.register(ClubUser)
 class ClubUserAdmin(BaseUserAdmin):
-    list_display = ['email', 'get_full_name', 'role', 'phone_number', 'is_active', 'last_login', 'date_joined']
+    list_display = ['email', 'get_full_name', 'role', 'primary_phone_number', 'is_active', 'last_login', 'date_joined']
     list_filter = ['role', 'is_active', 'is_staff', 'date_joined']
-    search_fields = ['email', 'first_name', 'last_name', 'phone_number']
+    search_fields = ['email', 'first_name', 'last_name', 'primary_phone_number']
     ordering = ['last_name', 'first_name']
     readonly_fields = ['date_joined', 'last_login', 'updated_at']
     
     fieldsets = (
         (None, {'fields': ('email', 'password')}),
         ('Personal Information', {
-            'fields': ('first_name', 'last_name', 'phone_number')
+            'fields': ('first_name', 'last_name', 'primary_phone_number')
         }),
         ('Permissions', {
             'fields': ('role', 'is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions')
@@ -64,6 +64,6 @@ class ClubUserAdmin(BaseUserAdmin):
     add_fieldsets = (
         (None, {
             'classes': ('wide',),
-            'fields': ('email', 'first_name', 'last_name', 'phone_number', 'password1', 'password2'),
+            'fields': ('email', 'first_name', 'last_name', 'primary_phone_number', 'password1', 'password2'),
         }),
     )

@@ -59,21 +59,51 @@
                         </a>
                     </li>
                     {% load event_permissions %}
-                    {% if user|can_edit_events or user|can_delete_events %}
+                    {% if user|can_access_member_directory %}
                         <li class="nav-item">
-                            <a class="nav-link" href="{% url 'calendar:event_action_log' %}">
-                                <i class="bi bi-journal-text"></i> Action Log
+                            <a class="nav-link" href="{% url 'management:members_directory' %}">
+                                <i class="bi bi-people"></i> Members Directory
                             </a>
                         </li>
                     {% endif %}
-                    {% if user|is_admin %}
-                        <li class="nav-item">
-                            <a class="nav-link" href="{% url 'management:dashboard' %}">
-                                <i class="bi bi-sliders"></i> Management
-                            </a>
+                    {% if user|is_admin or user|can_edit_events %}
+                        <li class ="nav-item dropdown">
+                            <a href="#" class="nav-link dropdown-toggle" id="adminDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="bi bi-sliders"></i> Management </a>
+                            <ul class="dropdown-menu" aria-labelledby="adminDropdown">
+                                {% if user|is_admin %}
+                                <li><a class="dropdown-item" href="{% url 'calendar:event_action_log' %}">
+                                    <i class="bi bi-journal-text"></i> Action Log
+                                </a></li>
+                                {% endif %}
+                                <li><a class="dropdown-item" href="{% url 'management:dashboard' %}">
+                                    <i class="bi bi-speedometer2"></i> Dashboard
+                                </a></li>
+                                <li><a class="dropdown-item" href="{% url 'management:dashboard_section' %}?section=documents">
+                                    <i class="bi bi-folder"></i> Documents
+                                </a></li>
+                                <li><a class="dropdown-item" href="{% url 'management:dashboard_section' %}?section=events">
+                                    <i class="bi bi-tags"></i> Event Management
+                                </a></li>
+                                {% if user|is_admin or user|can_edit_events %}
+                                    <li><a class="dropdown-item" href="{% url 'management:dashboard_section' %}?section=reports">
+                                        <i class="bi bi-bar-chart"></i> Reporting & Analytics
+                                    </a></li>
+                                    <li><a class="dropdown-item" href="{% url 'management:dashboard_section' %}?section=users">
+                                        <i class="bi bi-people"></i> User Management
+                                    </a></li>
+                                {% endif %}
+                                <li><a class="dropdown-item" href="{% url 'management:dashboard_section' %}?section=system">
+                                    <i class="bi bi-gear"></i> System Settings
+                                </a></li>
+                                <li><hr class="dropdown-divider"></li>
+                            </ul>
                         </li>
+                    {% endif %}
+                    {% if user|is_admin %}
+                        <!-- Admin link to Django admin panel opens in a new tab-->
                         <li class="nav-item">
-                            <a class="nav-link" href="{% url 'admin:index' %}">
+                            <a class="nav-link" href="{% url 'admin:index' %}" target="_blank">
                                 <i class="bi bi-gear"></i> Admin
                             </a>
                         </li>
