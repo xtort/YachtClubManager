@@ -1,0 +1,35 @@
+{% extends 'ManagementApp/base_management.html' %}
+
+{% block management_content %}
+<div class="card section-card">
+    <div class="section-header" style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);">
+        <h4 class="mb-0"><i class="bi bi-gear"></i> System Settings</h4>
+    </div>
+    <div class="section-body">
+        <div class="row">
+            <div class="col-md-6 mb-4">
+                <h6><i class="bi bi-speedometer2"></i> System Administration</h6>
+                <ul class="list-unstyled">
+                    <li class="mb-2">
+                        <a href="{% url 'admin:index' %}" class="quick-link" target="_blank">
+                            <i class="bi bi-gear"></i> Django Admin Panel
+                        </a>
+                    </li>
+                </ul>
+            </div>
+            <div class="col-md-6 mb-4">
+                <h6><i class="bi bi-plus-circle"></i> Future Features</h6>
+                <ul class="list-unstyled text-muted small">
+                    <li><i class="bi bi-hourglass-split"></i> Fleet Management</li>
+                    <li><i class="bi bi-hourglass-split"></i> Member Directory</li>
+                    <li><i class="bi bi-hourglass-split"></i> Photo Gallery</li>
+                    <li><i class="bi bi-hourglass-split"></i> Communications</li>
+                    <li><i class="bi bi-hourglass-split"></i> Email Notifications</li>
+                    <li><i class="bi bi-hourglass-split"></i> System Configuration</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

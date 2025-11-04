@@ -1,0 +1,286 @@
+{% extends 'CalendarApp/base.html' %}
+{% load static %}
+{% load event_permissions %}
+
+{% block title %}{% if object %}Edit{% else %}Create{% endif %} Event - Yacht Club Manager{% endblock %}
+
+{% block extra_css %}
+{{ form.media.css }}
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-10">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h2 class="mb-0">
+                    <i class="bi bi-{% if object %}pencil{% else %}plus-circle{% endif %}"></i>
+                    {% if object %}Edit Event{% else %}Create New Event{% endif %}
+                </h2>
+            </div>
+            <div class="card-body">
+                <form method="post" novalidate>
+                    {% csrf_token %}
+                    
+                    {% if form.non_field_errors %}
+                        <div class="alert alert-danger">
+                            {{ form.non_field_errors }}
+                        </div>
+                    {% endif %}
+
+                    <div class="mb-3">
+                        <label for="{{ form.title.id_for_label }}" class="form-label">
+                            {{ form.title.label }}
+                        </label>
+                        {{ form.title }}
+                        {% if form.title.errors %}
+                            <div class="text-danger small">{{ form.title.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="{{ form.short_description.id_for_label }}" class="form-label">
+                            {{ form.short_description.label }}
+                        </label>
+                        {{ form.short_description }}
+                        {% if form.short_description.help_text %}
+                            <small class="form-text text-muted">{{ form.short_description.help_text }}</small>
+                        {% endif %}
+                        {% if form.short_description.errors %}
+                            <div class="text-danger small">{{ form.short_description.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.category.id_for_label }}" class="form-label">
+                                {{ form.category.label }}
+                            </label>
+                            {{ form.category }}
+                            {% if form.category.errors %}
+                                <div class="text-danger small">{{ form.category.errors }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.start_datetime.id_for_label }}" class="form-label">
+                                {{ form.start_datetime.label }}
+                            </label>
+                            {{ form.start_datetime }}
+                            {% if form.start_datetime.errors %}
+                                <div class="text-danger small">{{ form.start_datetime.errors }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.end_datetime.id_for_label }}" class="form-label">
+                                {{ form.end_datetime.label }}
+                            </label>
+                            {{ form.end_datetime }}
+                            {% if form.end_datetime.errors %}
+                                <div class="text-danger small">{{ form.end_datetime.errors }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="{{ form.formatted_description.id_for_label }}" class="form-label">
+                            {{ form.formatted_description.label }}
+                        </label>
+                        {{ form.formatted_description }}
+                        {% if form.formatted_description.help_text %}
+                            <small class="form-text text-muted">{{ form.formatted_description.help_text }}</small>
+                        {% endif %}
+                        {% if form.formatted_description.errors %}
+                            <div class="text-danger small">{{ form.formatted_description.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <hr>
+
+                    <!-- Event Contacts Section -->
+                    <div class="mb-4">
+                        <h5 class="mb-3">
+                            <i class="bi bi-person-lines-fill"></i> Event Contacts
+                        </h5>
+                        <p class="text-muted small">Add one or more members as event contacts. One can be designated as the primary contact.</p>
+                        
+                        {{ contact_formset.management_form }}
+                        
+                        <div id="contact-formset">
+                            {% for contact_form in contact_formset %}
+                                <div class="card mb-3 contact-form-row" data-form-index="{{ forloop.counter0 }}">
+                                    <div class="card-body">
+                                        {% if contact_form.non_field_errors %}
+                                            <div class="alert alert-danger">
+                                                {{ contact_form.non_field_errors }}
+                                            </div>
+                                        {% endif %}
+                                        
+                                        {{ contact_form.id }}
+                                        {% if contact_form.DELETE %}
+                                            <div class="form-check mb-2">
+                                                {{ contact_form.DELETE }}
+                                                <label class="form-check-label" for="{{ contact_form.DELETE.id_for_label }}">
+                                                    Delete this contact
+                                                </label>
+                                            </div>
+                                        {% endif %}
+                                        
+                                        <div class="row">
+                                            <div class="col-md-6 mb-3">
+                                                <label for="{{ contact_form.member_search.id_for_label }}" class="form-label">
+                                                    {{ contact_form.member_search.label }}
+                                                </label>
+                                                {{ contact_form.member_search }}
+                                                {{ contact_form.member }}
+                                                <div id="autocomplete-{{ forloop.counter0 }}" class="autocomplete-dropdown"></div>
+                                                {% if contact_form.member.errors %}
+                                                    <div class="text-danger small">{{ contact_form.member.errors }}</div>
+                                                {% endif %}
+                                            </div>
+                                            <div class="col-md-6 mb-3">
+                                                <label class="form-label">Primary Contact</label>
+                                                <div class="form-check">
+                                                    {{ contact_form.is_primary }}
+                                                    <label class="form-check-label" for="{{ contact_form.is_primary.id_for_label }}">
+                                                        Set as primary contact
+                                                    </label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="mb-3">
+                                            <label for="{{ contact_form.responsibilities.id_for_label }}" class="form-label">
+                                                {{ contact_form.responsibilities.label }}
+                                            </label>
+                                            {{ contact_form.responsibilities }}
+                                            {% if contact_form.responsibilities.errors %}
+                                                <div class="text-danger small">{{ contact_form.responsibilities.errors }}</div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                        
+                        {% if contact_formset.non_form_errors %}
+                            <div class="alert alert-danger">
+                                {{ contact_formset.non_form_errors }}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{% if object %}{% url 'calendar:event_detail' object.pk %}{% else %}{% url 'calendar:calendar' %}{% endif %}" class="btn btn-outline-secondary">Cancel</a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-circle"></i> {% if object %}Update{% else %}Create{% endif %} Event
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{{ form.media.js }}
+<script>
+(function() {
+    const autocompleteUrl = "{% url 'calendar:member_autocomplete' %}";
+    let autocompleteTimeout = null;
+    
+    document.querySelectorAll('.member-autocomplete').forEach(function(input) {
+        const memberSelect = input.closest('.contact-form-row').querySelector('.member-select');
+        const autocompleteDiv = input.closest('.col-md-6').querySelector('.autocomplete-dropdown');
+        let selectedMemberId = null;
+        
+        input.addEventListener('input', function() {
+            const query = this.value.trim();
+            
+            clearTimeout(autocompleteTimeout);
+            
+            if (query.length < 2) {
+                autocompleteDiv.innerHTML = '';
+                autocompleteDiv.style.display = 'none';
+                return;
+            }
+            
+            autocompleteTimeout = setTimeout(function() {
+                fetch(autocompleteUrl + '?q=' + encodeURIComponent(query))
+                    .then(response => response.json())
+                    .then(data => {
+                        autocompleteDiv.innerHTML = '';
+                        
+                        if (data.results.length === 0) {
+                            autocompleteDiv.style.display = 'none';
+                            return;
+                        }
+                        
+                        autocompleteDiv.style.display = 'block';
+                        data.results.forEach(function(member) {
+                            const item = document.createElement('div');
+                            item.className = 'autocomplete-item';
+                            item.textContent = member.text;
+                            item.style.cursor = 'pointer';
+                            item.style.padding = '8px';
+                            item.style.borderBottom = '1px solid #ddd';
+                            item.style.backgroundColor = '#fff';
+                            
+                            item.addEventListener('mouseenter', function() {
+                                this.style.backgroundColor = '#f0f0f0';
+                            });
+                            item.addEventListener('mouseleave', function() {
+                                this.style.backgroundColor = '#fff';
+                            });
+                            
+                            item.addEventListener('click', function() {
+                                input.value = member.text;
+                                memberSelect.value = member.id;
+                                selectedMemberId = member.id;
+                                autocompleteDiv.style.display = 'none';
+                            });
+                            
+                            autocompleteDiv.appendChild(item);
+                        });
+                    })
+                    .catch(error => {
+                        console.error('Autocomplete error:', error);
+                    });
+            }, 300);
+        });
+        
+        // Hide dropdown when clicking outside
+        document.addEventListener('click', function(event) {
+            if (!input.contains(event.target) && !autocompleteDiv.contains(event.target)) {
+                autocompleteDiv.style.display = 'none';
+            }
+        });
+    });
+})();
+</script>
+<style>
+.autocomplete-dropdown {
+    position: absolute;
+    z-index: 1000;
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    max-height: 200px;
+    overflow-y: auto;
+    width: 100%;
+    margin-top: 2px;
+    display: none;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+.autocomplete-item:hover {
+    background-color: #f0f0f0 !important;
+}
+.contact-form-row {
+    position: relative;
+}
+</style>
+{% endblock %}
+

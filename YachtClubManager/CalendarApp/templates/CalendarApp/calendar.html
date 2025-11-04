@@ -1,0 +1,97 @@
+{% extends 'CalendarApp/base.html' %}
+{% load static %}
+{% load event_permissions %}
+
+{% block title %}Calendar - Yacht Club Manager{% endblock %}
+
+{% block extra_css %}
+<link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.css" rel="stylesheet">
+<style>
+    #calendar {
+        max-width: 100%;
+        margin: 20px auto;
+        padding: 20px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .fc-event {
+        cursor: pointer;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="bi bi-calendar3"></i> Event Calendar</h1>
+    {% if user|can_create_events %}
+        <a href="{% url 'calendar:event_create' %}" class="btn btn-primary">
+            <i class="bi bi-plus-circle"></i> Add New Event
+        </a>
+    {% endif %}
+</div>
+
+<div id="calendar"></div>
+
+<div class="mt-4">
+    <h3>Upcoming Events</h3>
+    <div class="row">
+        {% for event in events|slice:":6" %}
+            <div class="col-md-4 mb-3">
+                <div class="card event-card h-100">
+                    <div class="card-body">
+                        <h5 class="card-title">
+                            {% if event.category %}
+                                <span class="badge" style="background-color: {{ event.category.color }};">
+                                    {{ event.category.name }}
+                                </span>
+                            {% endif %}
+                            {{ event.title }}
+                        </h5>
+                        <p class="card-text text-muted small">
+                            <i class="bi bi-calendar"></i> {{ event.start_datetime|date:"M d, Y" }}<br>
+                            <i class="bi bi-clock"></i> {{ event.start_datetime|time:"g:i A" }} - {{ event.end_datetime|time:"g:i A" }}
+                        </p>
+                        <p class="card-text">{{ event.short_description|truncatewords:15 }}</p>
+                        <a href="{% url 'calendar:event_detail' event.pk %}" class="btn btn-sm btn-outline-primary">View Details</a>
+                    </div>
+                </div>
+            </div>
+        {% empty %}
+            <div class="col-12">
+                <p class="text-muted">No events scheduled yet. <a href="{% url 'calendar:event_create' %}">Create your first event!</a></p>
+            </div>
+        {% endfor %}
+    </div>
+    {% if events|length > 6 %}
+        <div class="text-center mt-3">
+            <a href="{% url 'calendar:event_list' %}" class="btn btn-outline-primary">View All Events</a>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const calendarEl = document.getElementById('calendar');
+        const calendar = new FullCalendar.Calendar(calendarEl, {
+            initialView: 'dayGridMonth',
+            headerToolbar: {
+                left: 'prev,next today',
+                center: 'title',
+                right: 'multiMonthYear,dayGridMonth,timeGridWeek,timeGridDay'
+            },
+            events: '{% url "calendar:calendar_json" %}',
+            eventClick: function(info) {
+                window.location.href = info.event.url;
+            },
+            eventDisplay: 'block',
+            height: 'auto'
+        });
+        calendar.render();
+    });
+</script>
+{% endblock %}
+

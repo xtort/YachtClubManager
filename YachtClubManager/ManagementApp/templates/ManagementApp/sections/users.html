@@ -1,0 +1,54 @@
+{% extends 'ManagementApp/base_management.html' %}
+{% load event_permissions %}
+
+{% block management_content %}
+<div class="card section-card">
+    <div class="section-header" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+        <h4 class="mb-0"><i class="bi bi-people"></i> User Management</h4>
+    </div>
+    <div class="section-body">
+        <div class="row">
+            <div class="col-md-6 mb-4">
+                <h6><i class="bi bi-person-lines-fill"></i> User Management</h6>
+                <ul class="list-unstyled">
+                    <li class="mb-2">
+                        <a href="{% url 'management:user_list' %}" class="quick-link">
+                            <i class="bi bi-list-ul"></i> View All Users
+                        </a>
+                    </li>
+                    <li class="mb-2">
+                        <a href="{% url 'management:user_create' %}" class="quick-link">
+                            <i class="bi bi-person-plus"></i> Create New User
+                        </a>
+                    </li>
+                </ul>
+            </div>
+            <div class="col-md-6 mb-4">
+                <h6><i class="bi bi-shield-check"></i> Roles & Permissions</h6>
+                <ul class="list-unstyled">
+                    <li class="mb-2">
+                        <a href="{% url 'admin:index' %}" class="quick-link" target="_blank">
+                            <i class="bi bi-gear"></i> Django Admin (Roles & Permissions)
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+        
+        <hr>
+        
+        <!-- Statistics -->
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h5 class="text-success">{{ total_users }}</h5>
+                        <p class="text-muted mb-0">Total Users</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

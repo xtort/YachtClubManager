@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Yacht Club Manager{% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    {% block extra_css %}{% endblock %}
+    <style>
+        .navbar-brand {
+            font-weight: bold;
+        }
+        .event-card {
+            transition: transform 0.2s;
+        }
+        .event-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .logout-form {
+            display: inline;
+        }
+        .logout-form button {
+            border: none;
+            background: none;
+            width: 100%;
+            text-align: left;
+            padding: 0.25rem 1rem;
+            color: #212529;
+            cursor: pointer;
+        }
+        .logout-form button:hover {
+            background-color: #f8f9fa;
+            color: #212529;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="{% url 'calendar:calendar' %}">
+                <i class="bi bi-calendar-event"></i> Yacht Club Manager
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'calendar:calendar' %}">
+                            <i class="bi bi-calendar3"></i> Calendar
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'calendar:event_list' %}">
+                            <i class="bi bi-list-ul"></i> All Events
+                        </a>
+                    </li>
+                    {% load event_permissions %}
+                    {% if user|can_edit_events or user|can_delete_events %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'calendar:event_action_log' %}">
+                                <i class="bi bi-journal-text"></i> Action Log
+                            </a>
+                        </li>
+                    {% endif %}
+                    {% if user|is_admin %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'management:dashboard' %}">
+                                <i class="bi bi-sliders"></i> Management
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'admin:index' %}">
+                                <i class="bi bi-gear"></i> Admin
+                            </a>
+                        </li>
+                    {% endif %}
+                </ul>
+                <ul class="navbar-nav">
+                    {% if user.is_authenticated %}
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="bi bi-person-circle"></i> {{ user.get_full_name|default:user.email }}
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+                                <li><span class="dropdown-item-text text-muted small">
+                                    {% if user.role %}
+                                        <i class="bi bi-shield-check"></i> {{ user.role.get_name_display }}
+                                    {% else %}
+                                        <i class="bi bi-person"></i> No role assigned
+                                    {% endif %}
+                                </span></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li>
+                                    <a class="dropdown-item" href="{% url 'management:profile' %}">
+                                        <i class="bi bi-person-gear"></i> My Profile
+                                    </a>
+                                </li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li>
+                                    <form method="post" action="{% url 'logout' %}" class="logout-form">
+                                        {% csrf_token %}
+                                        <button type="submit" class="dropdown-item">
+                                            <i class="bi bi-box-arrow-right"></i> Logout
+                                        </button>
+                                    </form>
+                                </li>
+                            </ul>
+                        </li>
+                    {% else %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'login' %}">
+                                <i class="bi bi-box-arrow-in-right"></i> Login
+                            </a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container my-4">
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="bg-light text-center py-3 mt-5">
+        <div class="container">
+            <small class="text-muted">&copy; {% now "Y" %} Yacht Club Manager</small>
+        </div>
+    </footer>
+
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

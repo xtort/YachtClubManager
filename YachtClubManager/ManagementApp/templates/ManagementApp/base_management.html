@@ -1,0 +1,163 @@
+{% extends 'CalendarApp/base.html' %}
+{% load event_permissions %}
+
+{% block title %}Management - Yacht Club Manager{% endblock %}
+
+{% block extra_css %}
+<style>
+    .management-sidebar {
+        min-height: calc(100vh - 120px);
+        background-color: #f8f9fa;
+        border-right: 1px solid #dee2e6;
+        padding: 20px 0;
+    }
+    .management-sidebar .nav-link {
+        color: #495057;
+        padding: 10px 20px;
+        border-left: 3px solid transparent;
+        transition: all 0.2s;
+    }
+    .management-sidebar .nav-link:hover {
+        background-color: #e9ecef;
+        border-left-color: #0d6efd;
+        color: #0d6efd;
+    }
+    .management-sidebar .nav-link.active {
+        background-color: #e7f1ff;
+        border-left-color: #0d6efd;
+        color: #0d6efd;
+        font-weight: 600;
+    }
+    .management-content {
+        padding: 20px;
+        min-height: calc(100vh - 120px);
+    }
+    .section-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 15px 20px;
+        border-radius: 8px 8px 0 0;
+        margin-bottom: 0;
+    }
+    .section-card {
+        border: none;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        margin-bottom: 30px;
+    }
+    .section-body {
+        padding: 20px;
+    }
+    .stat-card {
+        transition: transform 0.2s, box-shadow 0.2s;
+        border: none;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .stat-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    }
+    .quick-link {
+        text-decoration: none;
+        color: inherit;
+        transition: all 0.2s;
+    }
+    .quick-link:hover {
+        color: #0d6efd;
+    }
+    .nav-section {
+        margin-bottom: 30px;
+    }
+    .nav-section-title {
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        font-weight: 600;
+        color: #6c757d;
+        padding: 10px 20px 5px;
+        letter-spacing: 0.5px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="bi bi-sliders"></i> Management</h1>
+    <a href="{% url 'calendar:calendar' %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Back to Calendar
+    </a>
+</div>
+
+<div class="row">
+    <!-- Sidebar Navigation -->
+    <div class="col-md-3">
+        <div class="management-sidebar">
+            <nav class="nav flex-column">
+                <div class="nav-section">
+                    <div class="nav-section-title">Overview</div>
+                    <a class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" href="{% url 'management:dashboard' %}">
+                        <i class="bi bi-speedometer2"></i> Dashboard
+                    </a>
+                </div>
+                
+                <div class="nav-section">
+                    <div class="nav-section-title">Events</div>
+                    <a class="nav-link {% if request.resolver_match.url_name == 'dashboard_section' and request.GET.section == 'events' %}active{% endif %}" href="{% url 'management:dashboard_section' %}?section=events">
+                        <i class="bi bi-calendar-event"></i> Events Management
+                    </a>
+                    <a class="nav-link {% if 'category' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'management:category_list' %}">
+                        <i class="bi bi-tags"></i> Event Categories
+                    </a>
+                    {% if user|can_edit_events or user|can_delete_events %}
+                        <a class="nav-link" href="{% url 'calendar:event_action_log' %}">
+                            <i class="bi bi-journal-text"></i> Action Log
+                        </a>
+                    {% endif %}
+                </div>
+                
+                {% if user|is_admin %}
+                <div class="nav-section">
+                    <div class="nav-section-title">Users</div>
+                    <a class="nav-link {% if request.resolver_match.url_name == 'dashboard_section' and request.GET.section == 'users' %}active{% endif %}" href="{% url 'management:dashboard_section' %}?section=users">
+                        <i class="bi bi-people"></i> User Management
+                    </a>
+                    <a class="nav-link {% if 'user' in request.resolver_match.url_name and 'list' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'management:user_list' %}">
+                        <i class="bi bi-person-lines-fill"></i> All Users
+                    </a>
+                </div>
+                {% endif %}
+                
+                <div class="nav-section">
+                    <div class="nav-section-title">Reports</div>
+                    <a class="nav-link {% if request.resolver_match.url_name == 'dashboard_section' and request.GET.section == 'reports' %}active{% endif %}" href="{% url 'management:dashboard_section' %}?section=reports">
+                        <i class="bi bi-bar-chart"></i> Reporting & Analytics
+                    </a>
+                </div>
+                
+                <div class="nav-section">
+                    <div class="nav-section-title">Documents</div>
+                    <a class="nav-link {% if request.resolver_match.url_name == 'dashboard_section' and request.GET.section == 'documents' %}active{% endif %}" href="{% url 'management:dashboard_section' %}?section=documents">
+                        <i class="bi bi-folder"></i> Documents
+                    </a>
+                </div>
+                
+                <div class="nav-section">
+                    <div class="nav-section-title">System</div>
+                    <a class="nav-link {% if request.resolver_match.url_name == 'dashboard_section' and request.GET.section == 'system' %}active{% endif %}" href="{% url 'management:dashboard_section' %}?section=system">
+                        <i class="bi bi-gear"></i> System Settings
+                    </a>
+                    <a class="nav-link" href="{% url 'admin:index' %}" target="_blank">
+                        <i class="bi bi-wrench"></i> Django Admin
+                    </a>
+                </div>
+            </nav>
+        </div>
+    </div>
+    
+    <!-- Main Content Area -->
+    <div class="col-md-9">
+        <div class="management-content">
+            {% block management_content %}{% endblock %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+

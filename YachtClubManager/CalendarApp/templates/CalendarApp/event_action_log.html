@@ -1,0 +1,122 @@
+{% extends 'CalendarApp/base.html' %}
+{% load event_permissions %}
+
+{% block title %}Event Action Log - Yacht Club Manager{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <div class="d-flex justify-content-between align-items-center">
+        <h2><i class="bi bi-journal-text"></i> Event Action Log</h2>
+        <a href="{% url 'calendar:calendar' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Back to Calendar
+        </a>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header bg-primary text-white">
+        <h5 class="mb-0">Activity History</h5>
+    </div>
+    <div class="card-body">
+        {% if action_logs %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Timestamp</th>
+                            <th>Action</th>
+                            <th>User</th>
+                            <th>Event</th>
+                            <th>IP Address</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for log in action_logs %}
+                            <tr>
+                                <td>{{ log.timestamp|date:"Y-m-d H:i:s" }}</td>
+                                <td>
+                                    {% if log.action == 'created' %}
+                                        <span class="badge bg-success">
+                                            <i class="bi bi-plus-circle"></i> Created
+                                        </span>
+                                    {% elif log.action == 'updated' %}
+                                        <span class="badge bg-warning text-dark">
+                                            <i class="bi bi-pencil"></i> Updated
+                                        </span>
+                                    {% elif log.action == 'deleted' %}
+                                        <span class="badge bg-danger">
+                                            <i class="bi bi-trash"></i> Deleted
+                                        </span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if log.user %}
+                                        {{ log.user.get_full_name }}<br>
+                                        <small class="text-muted">{{ log.user.email }}</small>
+                                    {% else %}
+                                        <em class="text-muted">Unknown User</em>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if log.event %}
+                                        <a href="{% url 'calendar:event_detail' log.event.pk %}">
+                                            {{ log.event_title }}
+                                        </a>
+                                    {% else %}
+                                        <em>{{ log.event_title }}</em>
+                                        <small class="text-muted d-block">(Event deleted)</small>
+                                        {% if log.event_data %}
+                                            <button class="btn btn-sm btn-outline-info mt-1" type="button" data-bs-toggle="collapse" data-bs-target="#event-data-{{ log.id }}" aria-expanded="false">
+                                                View Details
+                                            </button>
+                                            <div class="collapse mt-2" id="event-data-{{ log.id }}">
+                                                <div class="card card-body small">
+                                                    <strong>Category:</strong> {{ log.event_data.category|default:"N/A" }}<br>
+                                                    <strong>Start:</strong> {{ log.event_data.start_datetime }}<br>
+                                                    <strong>End:</strong> {{ log.event_data.end_datetime }}
+                                                </div>
+                                            </div>
+                                        {% endif %}
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <small class="text-muted">{{ log.ip_address|default:"N/A" }}</small>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            {% if is_paginated %}
+                <nav aria-label="Action log pagination">
+                    <ul class="pagination justify-content-center">
+                        {% if page_obj.has_previous %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a>
+                            </li>
+                        {% endif %}
+                        
+                        <li class="page-item active">
+                            <span class="page-link">
+                                Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+                            </span>
+                        </li>
+                        
+                        {% if page_obj.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a>
+                            </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            {% endif %}
+        {% else %}
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle"></i> No action logs found.
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+

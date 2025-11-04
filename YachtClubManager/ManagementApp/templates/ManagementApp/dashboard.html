@@ -1,0 +1,98 @@
+{% extends 'ManagementApp/base_management.html' %}
+{% load event_permissions %}
+
+{% block management_content %}
+<!-- Statistics Overview -->
+<div class="row mb-4">
+    <div class="col-md-3 mb-3">
+        <div class="card stat-card text-center h-100">
+            <div class="card-body">
+                <h5 class="card-title"><i class="bi bi-calendar-event text-primary"></i> Total Events</h5>
+                <h2 class="text-primary">{{ total_events }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="card stat-card text-center h-100">
+            <div class="card-body">
+                <h5 class="card-title"><i class="bi bi-tags text-info"></i> Event Categories</h5>
+                <h2 class="text-info">{{ total_categories }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="card stat-card text-center h-100">
+            <div class="card-body">
+                <h5 class="card-title"><i class="bi bi-people text-success"></i> Total Users</h5>
+                <h2 class="text-success">{{ total_users }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="card stat-card text-center h-100">
+            <div class="card-body">
+                <h5 class="card-title"><i class="bi bi-journal-text text-warning"></i> Action Logs</h5>
+                <h2 class="text-warning">{{ total_action_logs|default:"0" }}</h2>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="card section-card mb-4">
+    <div class="section-header">
+        <h4 class="mb-0"><i class="bi bi-lightning"></i> Quick Actions</h4>
+    </div>
+    <div class="section-body">
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <h6><i class="bi bi-calendar-event"></i> Events</h6>
+                <div class="d-grid gap-2">
+                    <a href="{% url 'calendar:event_list' %}" class="btn btn-outline-primary btn-sm">
+                        <i class="bi bi-list-ul"></i> View All Events
+                    </a>
+                    {% if user|can_create_events %}
+                        <a href="{% url 'calendar:event_create' %}" class="btn btn-primary btn-sm">
+                            <i class="bi bi-plus-circle"></i> Create New Event
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="col-md-6 mb-3">
+                <h6><i class="bi bi-tags"></i> Categories</h6>
+                <div class="d-grid gap-2">
+                    <a href="{% url 'management:category_list' %}" class="btn btn-outline-info btn-sm">
+                        <i class="bi bi-list-ul"></i> Manage Categories
+                    </a>
+                    <a href="{% url 'management:category_create' %}" class="btn btn-info btn-sm">
+                        <i class="bi bi-plus-circle"></i> Create New Category
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Events -->
+{% if recent_events %}
+<div class="card section-card">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="bi bi-clock-history"></i> Recent Events</h5>
+    </div>
+    <div class="card-body">
+        <div class="list-group">
+            {% for event in recent_events %}
+                <a href="{% url 'calendar:event_detail' event.pk %}" class="list-group-item list-group-item-action">
+                    <div class="d-flex w-100 justify-content-between">
+                        <h6 class="mb-1">{{ event.title }}</h6>
+                        <small>{{ event.created_at|timesince }} ago</small>
+                    </div>
+                    <p class="mb-1 small">{{ event.short_description|truncatewords:15 }}</p>
+                    <small class="text-muted">{{ event.start_datetime|date:"F d, Y g:i A" }}</small>
+                </a>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
