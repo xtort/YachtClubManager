@@ -268,9 +268,13 @@ class ClubUser(AbstractBaseUser, PermissionsMixin):
     # Vessel Information
     vessel_type = models.CharField(max_length=20, choices=VESSEL_TYPE_CHOICES, blank=True)
     vessel_name = models.CharField(max_length=255, blank=True)
+    vessel_moorage_location = models.CharField(max_length=255, blank=True, help_text='Moorage location')
+    vessel_manufacturer = models.CharField(max_length=255, blank=True, help_text='Manufacturer/builder of boat')
+    vessel_model = models.CharField(max_length=255, blank=True, help_text='Model of boat')
     vessel_loa = models.DecimalField(max_digits=6, decimal_places=2, null=True, blank=True, help_text='Length Overall in feet')
     vessel_beam = models.DecimalField(max_digits=6, decimal_places=2, null=True, blank=True, help_text='Beam in feet')
     vessel_draft = models.DecimalField(max_digits=6, decimal_places=2, null=True, blank=True, help_text='Draft in feet')
+    vessel_cruising_speed = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True, help_text='Average cruising speed in knots')
     vessel_power_requirements = models.CharField(max_length=20, choices=VESSEL_POWER_CHOICES, blank=True)
     vessel_tie_preferences = models.CharField(max_length=30, choices=VESSEL_TIE_CHOICES, blank=True)
     

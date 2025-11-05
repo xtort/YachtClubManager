@@ -201,7 +201,8 @@ class ProfileUpdateForm(forms.ModelForm):
             # Work Information
             'company', 'occupation_title', 'work_phone',
             # Vessel Information
-            'vessel_type', 'vessel_name', 'vessel_loa', 'vessel_beam', 'vessel_draft',
+            'vessel_type', 'vessel_name', 'vessel_moorage_location', 'vessel_manufacturer', 'vessel_model',
+            'vessel_loa', 'vessel_beam', 'vessel_draft', 'vessel_cruising_speed',
             'vessel_power_requirements', 'vessel_tie_preferences',
             # Photos
             'member_photo', 'vessel_photo',
@@ -236,9 +237,13 @@ class ProfileUpdateForm(forms.ModelForm):
             # Vessel Information
             'vessel_type': forms.Select(attrs={'class': 'form-control'}),
             'vessel_name': forms.TextInput(attrs={'class': 'form-control'}),
+            'vessel_moorage_location': forms.TextInput(attrs={'class': 'form-control'}),
+            'vessel_manufacturer': forms.TextInput(attrs={'class': 'form-control'}),
+            'vessel_model': forms.TextInput(attrs={'class': 'form-control'}),
             'vessel_loa': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.1', 'placeholder': '32.0'}),
             'vessel_beam': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.1', 'placeholder': '14.5'}),
             'vessel_draft': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.1', 'placeholder': '3.4'}),
+            'vessel_cruising_speed': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.1', 'placeholder': '8.5'}),
             'vessel_power_requirements': forms.Select(attrs={'class': 'form-control'}),
             'vessel_tie_preferences': forms.Select(attrs={'class': 'form-control'}),
             # Photos
@@ -275,9 +280,13 @@ class ProfileUpdateForm(forms.ModelForm):
             # Vessel Information
             'vessel_type': 'Vessel Type',
             'vessel_name': 'Vessel Name',
+            'vessel_moorage_location': 'Moorage Location',
+            'vessel_manufacturer': 'Manufacturer/Builder',
+            'vessel_model': 'Model',
             'vessel_loa': 'Vessel LOA (feet)',
             'vessel_beam': 'Vessel Beam (feet)',
             'vessel_draft': 'Vessel Draft (feet)',
+            'vessel_cruising_speed': 'Average Cruising Speed (knots)',
             'vessel_power_requirements': 'Vessel Power Requirements',
             'vessel_tie_preferences': 'Vessel Tie Preferences',
             # Photos

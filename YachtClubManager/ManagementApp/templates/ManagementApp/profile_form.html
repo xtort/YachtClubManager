@@ -335,6 +335,48 @@
                             </div>
 
                             <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ form.vessel_moorage_location.id_for_label }}" class="form-label">
+                                        {{ form.vessel_moorage_location.label }}
+                                    </label>
+                                    {{ form.vessel_moorage_location }}
+                                    {% if form.vessel_moorage_location.errors %}
+                                        <div class="text-danger small">{{ form.vessel_moorage_location.errors }}</div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ form.vessel_manufacturer.id_for_label }}" class="form-label">
+                                        {{ form.vessel_manufacturer.label }}
+                                    </label>
+                                    {{ form.vessel_manufacturer }}
+                                    {% if form.vessel_manufacturer.errors %}
+                                        <div class="text-danger small">{{ form.vessel_manufacturer.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ form.vessel_model.id_for_label }}" class="form-label">
+                                        {{ form.vessel_model.label }}
+                                    </label>
+                                    {{ form.vessel_model }}
+                                    {% if form.vessel_model.errors %}
+                                        <div class="text-danger small">{{ form.vessel_model.errors }}</div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ form.vessel_cruising_speed.id_for_label }}" class="form-label">
+                                        {{ form.vessel_cruising_speed.label }}
+                                    </label>
+                                    {{ form.vessel_cruising_speed }}
+                                    {% if form.vessel_cruising_speed.errors %}
+                                        <div class="text-danger small">{{ form.vessel_cruising_speed.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <div class="row">
                                 <div class="col-md-4 mb-3">
                                     <label for="{{ form.vessel_loa.id_for_label }}" class="form-label">
                                         {{ form.vessel_loa.label }}
