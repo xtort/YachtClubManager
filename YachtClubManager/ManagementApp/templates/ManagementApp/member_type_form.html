@@ -1,0 +1,90 @@
+{% extends 'ManagementApp/base_management.html' %}
+
+{% block management_content %}
+<div class="row justify-content-center">
+    <div class="col-md-10">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h2 class="mb-0">
+                    <i class="bi bi-{% if object %}pencil{% else %}plus-circle{% endif %}"></i>
+                    {% if object %}Edit Member Type{% else %}Create New Member Type{% endif %}
+                </h2>
+            </div>
+            <div class="card-body">
+                <form method="post" novalidate>
+                    {% csrf_token %}
+                    
+                    {% if form.non_field_errors %}
+                        <div class="alert alert-danger">
+                            {{ form.non_field_errors }}
+                        </div>
+                    {% endif %}
+
+                    <div class="mb-3">
+                        <label for="{{ form.name.id_for_label }}" class="form-label">
+                            {{ form.name.label }}
+                        </label>
+                        {{ form.name }}
+                        {% if form.name.help_text %}
+                            <small class="form-text text-muted">{{ form.name.help_text }}</small>
+                        {% endif %}
+                        {% if form.name.errors %}
+                            <div class="text-danger small">{{ form.name.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="{{ form.description.id_for_label }}" class="form-label">
+                            {{ form.description.label }}
+                        </label>
+                        {{ form.description }}
+                        {% if form.description.help_text %}
+                            <small class="form-text text-muted">{{ form.description.help_text }}</small>
+                        {% endif %}
+                        {% if form.description.errors %}
+                            <div class="text-danger small">{{ form.description.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.display_order.id_for_label }}" class="form-label">
+                                {{ form.display_order.label }}
+                            </label>
+                            {{ form.display_order }}
+                            {% if form.display_order.help_text %}
+                                <small class="form-text text-muted">{{ form.display_order.help_text }}</small>
+                            {% endif %}
+                            {% if form.display_order.errors %}
+                                <div class="text-danger small">{{ form.display_order.errors }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <div class="form-check mt-4">
+                                {{ form.is_active }}
+                                <label class="form-check-label" for="{{ form.is_active.id_for_label }}">
+                                    {{ form.is_active.label }}
+                                </label>
+                                {% if form.is_active.help_text %}
+                                    <small class="form-text text-muted d-block">{{ form.is_active.help_text }}</small>
+                                {% endif %}
+                                {% if form.is_active.errors %}
+                                    <div class="text-danger small">{{ form.is_active.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{% url 'management:member_type_list' %}" class="btn btn-outline-secondary">Cancel</a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-circle"></i> {% if object %}Update{% else %}Create{% endif %} Member Type
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

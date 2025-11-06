@@ -1,0 +1,52 @@
+{% extends 'ManagementApp/base_management.html' %}
+
+{% block management_content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card border-danger">
+            <div class="card-header bg-danger text-white">
+                <h2 class="mb-0"><i class="bi bi-exclamation-triangle"></i> Delete Member Type</h2>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-warning">
+                    <strong>Warning!</strong> Are you sure you want to delete this member type?
+                </div>
+                
+                <div class="mb-3">
+                    <h5>{{ member_type.name }}</h5>
+                    {% if member_type.description %}
+                        <p class="text-muted">{{ member_type.description }}</p>
+                    {% endif %}
+                    <p class="mb-0">
+                        <strong>Display Order:</strong> {{ member_type.display_order }}<br>
+                        <strong>Status:</strong> 
+                        {% if member_type.is_active %}
+                            <span class="badge bg-success">Active</span>
+                        {% else %}
+                            <span class="badge bg-secondary">Inactive</span>
+                        {% endif %}
+                    </p>
+                </div>
+
+                {% if member_count > 0 %}
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i> This member type is currently assigned to <strong>{{ member_count }}</strong> member(s). 
+                        If you delete this member type, it will be removed from those members.
+                    </div>
+                {% endif %}
+
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{% url 'management:member_type_list' %}" class="btn btn-outline-secondary">Cancel</a>
+                        <button type="submit" class="btn btn-danger">
+                            <i class="bi bi-trash"></i> Yes, Delete Member Type
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

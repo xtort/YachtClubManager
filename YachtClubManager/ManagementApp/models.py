@@ -113,6 +113,24 @@ COUNTRIES = [
 ]
 
 
+class MemberType(models.Model):
+    """Member Types for categorizing club members (e.g., Full Member, Associate, Honorary, etc.)"""
+    name = models.CharField(max_length=100, unique=True, help_text='Name of the member type')
+    description = models.TextField(blank=True, help_text='Description of this member type')
+    is_active = models.BooleanField(default=True, help_text='Whether this member type is currently active')
+    display_order = models.IntegerField(default=0, help_text='Order in which to display this member type')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['display_order', 'name']
+        verbose_name = 'Member Type'
+        verbose_name_plural = 'Member Types'
+    
+    def __str__(self):
+        return self.name
+
+
 class Role(models.Model):
     """Role-Based Access Control roles"""
     ROLE_CHOICES = [
@@ -284,6 +302,12 @@ class ClubUser(AbstractBaseUser, PermissionsMixin):
     
     # Role and permissions
     role = models.ForeignKey(Role, on_delete=models.SET_NULL, null=True, blank=True, related_name='users')
+    member_types = models.ManyToManyField(
+        'MemberType',
+        related_name='members',
+        blank=True,
+        help_text='Member types assigned to this user (at least one required)'
+    )
     
     # Account status
     is_active = models.BooleanField(default=True, help_text='Designates whether this user can log in.')

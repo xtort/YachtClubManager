@@ -74,6 +74,19 @@
                         {% endif %}
                     </div>
 
+                    <div class="mb-3">
+                        <label for="{{ form.member_types.id_for_label }}" class="form-label">
+                            {{ form.member_types.label }}
+                        </label>
+                        {{ form.member_types }}
+                        {% if form.member_types.help_text %}
+                            <small class="form-text text-muted">{{ form.member_types.help_text }}</small>
+                        {% endif %}
+                        {% if form.member_types.errors %}
+                            <div class="text-danger small">{{ form.member_types.errors }}</div>
+                        {% endif %}
+                    </div>
+
                     <hr>
 
                     {% if object %}

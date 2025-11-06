@@ -100,6 +100,84 @@ class Event(models.Model):
     def get_contacts(self):
         """Get all contacts ordered by primary first, then by name"""
         return self.event_contacts.all().order_by('-is_primary', 'member__last_name', 'member__first_name')
+    
+    def can_register(self, user):
+        """Check if a user can register for this event"""
+        if not user or not user.is_authenticated:
+            return False
+        
+        # Check if user has appropriate role (member, editor, or admin)
+        if not hasattr(user, 'role') or not user.role:
+            return False
+        
+        role_name = user.role.name.lower() if user.role.name else ''
+        if role_name not in ['member', 'editor', 'admin']:
+            return False
+        
+        # Check if registration status allows registration
+        if self.registration_status not in ['recommended', 'required', 'required_by_close_date']:
+            return False
+        
+        # Check if registration has opened (if registration_open_datetime is set)
+        if self.registration_open_datetime:
+            from django.utils import timezone
+            if timezone.now() < self.registration_open_datetime:
+                return False
+        
+        return True
+    
+    def is_registered(self, user):
+        """Check if a user is registered for this event"""
+        if not user or not user.is_authenticated:
+            return False
+        return self.registrations.filter(member=user, cancelled=False).exists()
+    
+    def get_registration_count(self):
+        """Get the count of active registrations"""
+        return self.registrations.filter(cancelled=False).count()
+
+
+class EventRegistration(models.Model):
+    """Registration of a member for an event"""
+    event = models.ForeignKey(
+        Event,
+        on_delete=models.CASCADE,
+        related_name='registrations',
+        help_text='Event being registered for'
+    )
+    member = models.ForeignKey(
+        ClubUser,
+        on_delete=models.CASCADE,
+        related_name='event_registrations',
+        help_text='Member registering for the event'
+    )
+    registered_at = models.DateTimeField(auto_now_add=True, help_text='When the member registered')
+    cancelled = models.BooleanField(default=False, help_text='Whether the registration was cancelled')
+    cancelled_at = models.DateTimeField(null=True, blank=True, help_text='When the registration was cancelled')
+    notes = models.TextField(blank=True, help_text='Additional notes about the registration')
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        unique_together = [['event', 'member']]
+        ordering = ['registered_at']
+        indexes = [
+            models.Index(fields=['event', 'cancelled']),
+            models.Index(fields=['member']),
+            models.Index(fields=['registered_at']),
+        ]
+        verbose_name = 'Event Registration'
+        verbose_name_plural = 'Event Registrations'
+    
+    def __str__(self):
+        status = "Cancelled" if self.cancelled else "Registered"
+        return f"{self.member.get_full_name()} - {self.event.title} ({status})"
+    
+    def cancel(self):
+        """Cancel this registration"""
+        from django.utils import timezone
+        self.cancelled = True
+        self.cancelled_at = timezone.now()
+        self.save()
 
 
 class EventContact(models.Model):

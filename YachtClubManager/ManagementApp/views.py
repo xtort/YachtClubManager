@@ -6,7 +6,8 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth import get_user_model
 from django.core.exceptions import PermissionDenied
 from CalendarApp.models import EventCategory, Event
-from .forms import EventCategoryForm, ClubUserCreateForm, ClubUserUpdateForm, ProfileUpdateForm
+from .models import Role, MemberType
+from .forms import EventCategoryForm, ClubUserCreateForm, ClubUserUpdateForm, ProfileUpdateForm, MemberTypeForm, RoleForm
 from .mixins import UserManagementRequiredMixin, MemberDirectoryRequiredMixin
 
 ClubUser = get_user_model()
@@ -295,4 +296,148 @@ class ProfileUpdateView(LoginRequiredMixin, UpdateView):
             'Your profile has been updated successfully!'
             + (' Password has been changed.' if password_changed else '')
         )
+        return super().form_valid(form)
+
+
+# Member Type Management Views
+class MemberTypeListView(UserManagementRequiredMixin, ListView):
+    """List view of all member types"""
+    model = MemberType
+    template_name = 'ManagementApp/member_type_list.html'
+    context_object_name = 'member_types'
+
+    def get_queryset(self):
+        return MemberType.objects.all().order_by('display_order', 'name')
+
+
+class MemberTypeCreateView(UserManagementRequiredMixin, CreateView):
+    """View for creating a new member type"""
+    model = MemberType
+    form_class = MemberTypeForm
+    template_name = 'ManagementApp/member_type_form.html'
+    success_url = reverse_lazy('management:member_type_list')
+
+    def form_valid(self, form):
+        messages.success(
+            self.request,
+            f'Member Type "{form.cleaned_data["name"]}" has been created successfully!'
+        )
+        return super().form_valid(form)
+
+
+class MemberTypeUpdateView(UserManagementRequiredMixin, UpdateView):
+    """View for updating an existing member type"""
+    model = MemberType
+    form_class = MemberTypeForm
+    template_name = 'ManagementApp/member_type_form.html'
+    success_url = reverse_lazy('management:member_type_list')
+    context_object_name = 'member_type'
+
+    def form_valid(self, form):
+        messages.success(
+            self.request,
+            f'Member Type "{form.cleaned_data["name"]}" has been updated successfully!'
+        )
+        return super().form_valid(form)
+
+
+class MemberTypeDeleteView(UserManagementRequiredMixin, DeleteView):
+    """View for deleting a member type"""
+    model = MemberType
+    template_name = 'ManagementApp/member_type_confirm_delete.html'
+    success_url = reverse_lazy('management:member_type_list')
+    context_object_name = 'member_type'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # Check if any users are using this member type
+        context['member_count'] = self.object.members.count()
+        return context
+
+    def form_valid(self, form):
+        member_type_name = self.object.name
+        member_count = self.object.members.count()
+        
+        if member_count > 0:
+            messages.warning(
+                self.request,
+                f'Member Type "{member_type_name}" deleted. {member_count} member(s) using this type will have it removed.'
+            )
+        else:
+            messages.success(
+                self.request,
+                f'Member Type "{member_type_name}" has been deleted successfully!'
+            )
+        return super().form_valid(form)
+
+
+# Role Management Views
+class RoleListView(UserManagementRequiredMixin, ListView):
+    """List view of all roles"""
+    model = Role
+    template_name = 'ManagementApp/role_list.html'
+    context_object_name = 'roles'
+
+    def get_queryset(self):
+        return Role.objects.all().order_by('name')
+
+
+class RoleCreateView(UserManagementRequiredMixin, CreateView):
+    """View for creating a new role"""
+    model = Role
+    form_class = RoleForm
+    template_name = 'ManagementApp/role_form.html'
+    success_url = reverse_lazy('management:role_list')
+
+    def form_valid(self, form):
+        messages.success(
+            self.request,
+            f'Role "{form.cleaned_data["name"]}" has been created successfully!'
+        )
+        return super().form_valid(form)
+
+
+class RoleUpdateView(UserManagementRequiredMixin, UpdateView):
+    """View for updating an existing role"""
+    model = Role
+    form_class = RoleForm
+    template_name = 'ManagementApp/role_form.html'
+    success_url = reverse_lazy('management:role_list')
+    context_object_name = 'role'
+
+    def form_valid(self, form):
+        messages.success(
+            self.request,
+            f'Role "{form.cleaned_data["name"]}" has been updated successfully!'
+        )
+        return super().form_valid(form)
+
+
+class RoleDeleteView(UserManagementRequiredMixin, DeleteView):
+    """View for deleting a role"""
+    model = Role
+    template_name = 'ManagementApp/role_confirm_delete.html'
+    success_url = reverse_lazy('management:role_list')
+    context_object_name = 'role'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # Check if any users are using this role
+        context['user_count'] = self.object.users.count()
+        return context
+
+    def form_valid(self, form):
+        role_name = self.object.get_name_display()
+        user_count = self.object.users.count()
+        
+        if user_count > 0:
+            messages.warning(
+                self.request,
+                f'Role "{role_name}" deleted. {user_count} user(s) using this role will have it set to NULL.'
+            )
+        else:
+            messages.success(
+                self.request,
+                f'Role "{role_name}" has been deleted successfully!'
+            )
         return super().form_valid(form)

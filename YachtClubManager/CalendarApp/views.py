@@ -7,10 +7,10 @@ from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import get_user_model
-from .models import Event, EventCategory, EventActionLog
+from .models import Event, EventCategory, EventActionLog, EventRegistration
 from .forms import EventForm, EventContactFormSet
 from ManagementApp.mixins import EventEditRequiredMixin, EventDeleteRequiredMixin
-from django.shortcuts import redirect
+from django.shortcuts import redirect, get_object_or_404
 
 ClubUser = get_user_model()
 
@@ -47,6 +47,18 @@ class EventDetailView(DetailView):
     model = Event
     template_name = 'CalendarApp/event_detail.html'
     context_object_name = 'event'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        event = self.object
+        user = self.request.user
+        
+        # Check if user can register and if they're already registered
+        context['can_register'] = event.can_register(user)
+        context['is_registered'] = event.is_registered(user) if user.is_authenticated else False
+        context['registration_count'] = event.get_registration_count()
+        
+        return context
 
 
 class EventCreateView(LoginRequiredMixin, CreateView):
@@ -273,3 +285,48 @@ def member_autocomplete(request):
         })
     
     return JsonResponse({'results': results})
+
+
+@login_required
+@require_http_methods(["POST"])
+def event_register(request, pk):
+    """Register a user for an event"""
+    event = get_object_or_404(Event, pk=pk)
+    user = request.user
+    
+    # Check if user can register
+    if not event.can_register(user):
+        messages.error(request, 'You cannot register for this event.')
+        return redirect('calendar:event_detail', pk=pk)
+    
+    # Check if already registered
+    if event.is_registered(user):
+        messages.info(request, 'You are already registered for this event.')
+        return redirect('calendar:event_detail', pk=pk)
+    
+    # Create registration
+    EventRegistration.objects.create(
+        event=event,
+        member=user
+    )
+    
+    messages.success(request, f'You have successfully registered for "{event.title}"!')
+    return redirect('calendar:event_detail', pk=pk)
+
+
+@login_required
+@require_http_methods(["POST"])
+def event_unregister(request, pk):
+    """Unregister a user from an event"""
+    event = get_object_or_404(Event, pk=pk)
+    user = request.user
+    
+    # Find the registration
+    try:
+        registration = EventRegistration.objects.get(event=event, member=user, cancelled=False)
+        registration.cancel()
+        messages.success(request, f'You have successfully unregistered from "{event.title}".')
+    except EventRegistration.DoesNotExist:
+        messages.error(request, 'You are not registered for this event.')
+    
+    return redirect('calendar:event_detail', pk=pk)

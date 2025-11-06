@@ -2,7 +2,7 @@ from django import forms
 from django.contrib.auth import get_user_model
 from django.core.validators import RegexValidator
 from CalendarApp.models import EventCategory
-from .models import Role, SALUTATION_CHOICES, COUNTRIES, US_STATES, VESSEL_TYPE_CHOICES, VESSEL_POWER_CHOICES, VESSEL_TIE_CHOICES
+from .models import Role, MemberType, SALUTATION_CHOICES, COUNTRIES, US_STATES, VESSEL_TYPE_CHOICES, VESSEL_POWER_CHOICES, VESSEL_TIE_CHOICES
 import pytz
 
 ClubUser = get_user_model()
@@ -11,6 +11,105 @@ ClubUser = get_user_model()
 TIMEZONE_CHOICES = [(tz, tz) for tz in pytz.common_timezones]
 TIMEZONE_CHOICES.insert(0, ('', ''))
 
+
+
+class MemberTypeForm(forms.ModelForm):
+    """Form for creating and editing member types"""
+    
+    class Meta:
+        model = MemberType
+        fields = ['name', 'description', 'is_active', 'display_order']
+        widgets = {
+            'name': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Member type name (e.g., Full Member, Associate)'
+            }),
+            'description': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': 'Description of this member type'
+            }),
+            'is_active': forms.CheckboxInput(attrs={
+                'class': 'form-check-input'
+            }),
+            'display_order': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'min': '0',
+            }),
+        }
+        labels = {
+            'name': 'Member Type Name',
+            'description': 'Description',
+            'is_active': 'Active',
+            'display_order': 'Display Order',
+        }
+        help_texts = {
+            'display_order': 'Lower numbers appear first in lists. Use this to control the order.',
+        }
+
+    def clean_name(self):
+        name = self.cleaned_data.get('name')
+        if name:
+            name = name.strip()
+        return name
+
+
+class RoleForm(forms.ModelForm):
+    """Form for creating and editing roles"""
+    
+    class Meta:
+        model = Role
+        fields = ['name', 'description', 'can_view_events', 'can_create_events', 
+                  'can_edit_events', 'can_delete_events', 'can_manage_categories', 
+                  'can_manage_users', 'can_access_admin']
+        widgets = {
+            'name': forms.Select(attrs={
+                'class': 'form-control'
+            }),
+            'description': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': 'Description of this role and its permissions'
+            }),
+            'can_view_events': forms.CheckboxInput(attrs={
+                'class': 'form-check-input'
+            }),
+            'can_create_events': forms.CheckboxInput(attrs={
+                'class': 'form-check-input'
+            }),
+            'can_edit_events': forms.CheckboxInput(attrs={
+                'class': 'form-check-input'
+            }),
+            'can_delete_events': forms.CheckboxInput(attrs={
+                'class': 'form-check-input'
+            }),
+            'can_manage_categories': forms.CheckboxInput(attrs={
+                'class': 'form-check-input'
+            }),
+            'can_manage_users': forms.CheckboxInput(attrs={
+                'class': 'form-check-input'
+            }),
+            'can_access_admin': forms.CheckboxInput(attrs={
+                'class': 'form-check-input'
+            }),
+        }
+        labels = {
+            'name': 'Role Name',
+            'description': 'Description',
+            'can_view_events': 'Can View Events',
+            'can_create_events': 'Can Create Events',
+            'can_edit_events': 'Can Edit Events',
+            'can_delete_events': 'Can Delete Events',
+            'can_manage_categories': 'Can Manage Categories',
+            'can_manage_users': 'Can Manage Users',
+            'can_access_admin': 'Can Access Admin Panel',
+        }
+
+    def clean_name(self):
+        name = self.cleaned_data.get('name')
+        if name:
+            name = name.strip()
+        return name
 
 
 class EventCategoryForm(forms.ModelForm):
@@ -68,13 +167,14 @@ class ClubUserCreateForm(forms.ModelForm):
 
     class Meta:
         model = ClubUser
-        fields = ['email', 'first_name', 'last_name', 'primary_phone_number', 'role', 'is_active']
+        fields = ['email', 'first_name', 'last_name', 'primary_phone_number', 'role', 'member_types', 'is_active']
         widgets = {
             'email': forms.EmailInput(attrs={'class': 'form-control'}),
             'first_name': forms.TextInput(attrs={'class': 'form-control'}),
             'last_name': forms.TextInput(attrs={'class': 'form-control'}),
             'primary_phone_number': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '+1234567890'}),
             'role': forms.Select(attrs={'class': 'form-control'}),
+            'member_types': forms.SelectMultiple(attrs={'class': 'form-control', 'size': '5'}),
             'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
         labels = {
@@ -83,7 +183,11 @@ class ClubUserCreateForm(forms.ModelForm):
             'last_name': 'Last Name',
             'primary_phone_number': 'Primary Phone Number',
             'role': 'Role',
+            'member_types': 'Member Types',
             'is_active': 'Active',
+        }
+        help_texts = {
+            'member_types': 'Select at least one member type. Hold Ctrl/Cmd to select multiple.',
         }
 
     def clean_email(self):
@@ -98,12 +202,20 @@ class ClubUserCreateForm(forms.ModelForm):
         if password1 and password2 and password1 != password2:
             raise forms.ValidationError('Passwords do not match.')
         return password2
+    
+    def clean_member_types(self):
+        member_types = self.cleaned_data.get('member_types')
+        if not member_types:
+            raise forms.ValidationError('At least one member type must be selected.')
+        return member_types
 
     def save(self, commit=True):
         user = super().save(commit=False)
         user.set_password(self.cleaned_data['password1'])  # Django handles salting/hashing
         if commit:
             user.save()
+            # Save many-to-many relationships
+            self.save_m2m()
         return user
 
 
@@ -123,13 +235,14 @@ class ClubUserUpdateForm(forms.ModelForm):
 
     class Meta:
         model = ClubUser
-        fields = ['email', 'first_name', 'last_name', 'primary_phone_number', 'role', 'is_active']
+        fields = ['email', 'first_name', 'last_name', 'primary_phone_number', 'role', 'member_types', 'is_active']
         widgets = {
             'email': forms.EmailInput(attrs={'class': 'form-control'}),
             'first_name': forms.TextInput(attrs={'class': 'form-control'}),
             'last_name': forms.TextInput(attrs={'class': 'form-control'}),
             'primary_phone_number': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '+1234567890'}),
             'role': forms.Select(attrs={'class': 'form-control'}),
+            'member_types': forms.SelectMultiple(attrs={'class': 'form-control', 'size': '5'}),
             'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
         labels = {
@@ -138,7 +251,11 @@ class ClubUserUpdateForm(forms.ModelForm):
             'last_name': 'Last Name',
             'primary_phone_number': 'Primary Phone Number',
             'role': 'Role',
+            'member_types': 'Member Types',
             'is_active': 'Active',
+        }
+        help_texts = {
+            'member_types': 'Select at least one member type. Hold Ctrl/Cmd to select multiple.',
         }
 
     def clean_email(self):
@@ -156,6 +273,12 @@ class ClubUserUpdateForm(forms.ModelForm):
             if password1 != password2:
                 raise forms.ValidationError('Passwords do not match.')
         return password2
+    
+    def clean_member_types(self):
+        member_types = self.cleaned_data.get('member_types')
+        if not member_types:
+            raise forms.ValidationError('At least one member type must be selected.')
+        return member_types
 
     def save(self, commit=True):
         user = super().save(commit=False)
@@ -164,6 +287,8 @@ class ClubUserUpdateForm(forms.ModelForm):
             user.set_password(password)  # Django handles salting/hashing
         if commit:
             user.save()
+            # Save many-to-many relationships
+            self.save_m2m()
         return user
 
 
