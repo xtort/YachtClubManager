@@ -36,6 +36,13 @@ class Event(models.Model):
         ('external', 'External'),
     ]
     
+    REGISTRANT_LIST_VISIBILITY_CHOICES = [
+        ('none', 'None'),
+        ('viewer_public', 'Viewer/Public'),
+        ('members', 'Members'),
+        ('registered_members_only', 'Registered Members Only'),
+    ]
+    
     title = models.CharField(max_length=200)
     short_description = models.TextField(max_length=500, help_text='Brief description of the event')
     category = models.ForeignKey(EventCategory, on_delete=models.SET_NULL, null=True, blank=True, related_name='events')
@@ -52,6 +59,12 @@ class Event(models.Model):
         null=True,
         blank=True,
         help_text='Optional date and time when registration AUTOMATICALLY opens for REGISTRATIONS on this event'
+    )
+    registrant_list_visibility = models.CharField(
+        max_length=30,
+        choices=REGISTRANT_LIST_VISIBILITY_CHOICES,
+        default='none',
+        help_text='Who can view the list of registrants for this event'
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
