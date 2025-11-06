@@ -59,6 +59,17 @@
             </div>
         {% endif %}
 
+        <hr>
+
+        <!-- Registration Section -->
+        <div class="mb-3">
+            <h5><i class="bi bi-clipboard-check"></i> Registration</h5>
+            <p class="mb-0">
+                <strong>Status:</strong> 
+                <span class="badge bg-info">{{ event.get_registration_status_display }}</span>
+            </p>
+        </div>
+
         {% if event.get_contacts %}
             <hr>
             <div class="mb-3">

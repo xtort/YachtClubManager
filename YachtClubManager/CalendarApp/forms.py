@@ -67,13 +67,14 @@ class EventForm(forms.ModelForm):
 
     class Meta:
         model = Event
-        fields = ['title', 'short_description', 'category', 'start_datetime', 'end_datetime', 'formatted_description']
+        fields = ['title', 'short_description', 'category', 'start_datetime', 'end_datetime', 'formatted_description', 'registration_status']
         widgets = {
             'title': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Event Title'}),
             'short_description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Brief description'}),
             'category': forms.Select(attrs={'class': 'form-control'}),
             'start_datetime': forms.DateTimeInput(attrs={'class': 'form-control', 'type': 'datetime-local'}),
             'end_datetime': forms.DateTimeInput(attrs={'class': 'form-control', 'type': 'datetime-local'}),
+            'registration_status': forms.Select(attrs={'class': 'form-control'}),
         }
         labels = {
             'title': 'Event Title',
@@ -82,6 +83,7 @@ class EventForm(forms.ModelForm):
             'start_datetime': 'Start Date & Time',
             'end_datetime': 'End Date & Time',
             'formatted_description': 'Formatted Description',
+            'registration_status': 'Registration Status',
         }
 
     def clean(self):

@@ -52,6 +52,9 @@
                             <i class="bi bi-calendar"></i> {{ event.start_datetime|date:"M d, Y" }}<br>
                             <i class="bi bi-clock"></i> {{ event.start_datetime|time:"g:i A" }} - {{ event.end_datetime|time:"g:i A" }}
                         </p>
+                        <p class="card-text text-muted small">
+                            Registration Status: <i class="bi bi-status-up"></i> {{ event.registration_status }}
+                        </p>
                         <p class="card-text">{{ event.short_description|truncatewords:15 }}</p>
                         <a href="{% url 'calendar:event_detail' event.pk %}" class="btn btn-sm btn-outline-primary">View Details</a>
                     </div>
