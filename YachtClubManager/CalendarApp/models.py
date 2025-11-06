@@ -24,12 +24,30 @@ class EventCategory(models.Model):
 
 class Event(models.Model):
     """Calendar event/activity for the Yacht Club"""
+    
+    REGISTRATION_STATUS_CHOICES = [
+        ('not_required', 'Not Required'),
+        ('recommended', 'Recommended'),
+        ('required', 'Required'),
+        ('required_by_close_date', 'Required By Close Date'),
+        ('admins_contacts_only', 'Admins / Event Contacts Only'),
+        ('temporarily_unavailable', 'Temporarily Unavailable'),
+        ('closed', 'Closed'),
+        ('external', 'External'),
+    ]
+    
     title = models.CharField(max_length=200)
     short_description = models.TextField(max_length=500, help_text='Brief description of the event')
     category = models.ForeignKey(EventCategory, on_delete=models.SET_NULL, null=True, blank=True, related_name='events')
     start_datetime = models.DateTimeField()
     end_datetime = models.DateTimeField()
     formatted_description = RichTextField(blank=True, null=True, help_text='Full formatted description with rich text')
+    registration_status = models.CharField(
+        max_length=30,
+        choices=REGISTRATION_STATUS_CHOICES,
+        default='not_required',
+        help_text='Registration status for this event'
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
