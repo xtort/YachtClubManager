@@ -64,10 +64,16 @@
         <!-- Registration Section -->
         <div class="mb-3">
             <h5><i class="bi bi-clipboard-check"></i> Registration</h5>
-            <p class="mb-0">
+            <p class="mb-1">
                 <strong>Status:</strong> 
                 <span class="badge bg-info">{{ event.get_registration_status_display }}</span>
             </p>
+            {% if event.registration_open_datetime %}
+                <p class="mb-0">
+                    <strong>Registration Opens:</strong> 
+                    {{ event.registration_open_datetime|date:"F d, Y" }} at {{ event.registration_open_datetime|time:"g:i A" }}
+                </p>
+            {% endif %}
         </div>
 
         {% if event.get_contacts %}

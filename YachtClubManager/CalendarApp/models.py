@@ -48,6 +48,11 @@ class Event(models.Model):
         default='not_required',
         help_text='Registration status for this event'
     )
+    registration_open_datetime = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text='Optional date and time when registration AUTOMATICALLY opens for REGISTRATIONS on this event'
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
