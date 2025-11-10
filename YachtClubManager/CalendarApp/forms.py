@@ -1,6 +1,6 @@
 from django import forms
 from django.forms import inlineformset_factory
-from ckeditor.widgets import CKEditorWidget
+from django_ckeditor_5.widgets import CKEditor5Widget
 from .models import Event, EventCategory, EventContact
 from django.contrib.auth import get_user_model
 
@@ -60,7 +60,7 @@ class EventForm(forms.ModelForm):
     """Form for creating and editing events"""
     
     formatted_description = forms.CharField(
-        widget=CKEditorWidget(),
+        widget=CKEditor5Widget(config_name='extends'),
         required=False,
         help_text='Full formatted description with rich text editor'
     )

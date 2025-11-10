@@ -1,7 +1,7 @@
 from django.db import models
 from django.urls import reverse
 from django.contrib.auth import get_user_model
-from ckeditor.fields import RichTextField
+from django_ckeditor_5.fields import CKEditor5Field
 
 ClubUser = get_user_model()
 
@@ -48,7 +48,7 @@ class Event(models.Model):
     category = models.ForeignKey(EventCategory, on_delete=models.SET_NULL, null=True, blank=True, related_name='events')
     start_datetime = models.DateTimeField()
     end_datetime = models.DateTimeField()
-    formatted_description = RichTextField(blank=True, null=True, help_text='Full formatted description with rich text')
+    formatted_description = CKEditor5Field('Text', config_name='extends', blank=True, null=True, help_text='Full formatted description with rich text')
     registration_status = models.CharField(
         max_length=30,
         choices=REGISTRATION_STATUS_CHOICES,

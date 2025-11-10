@@ -24,7 +24,6 @@ urlpatterns = [
     path('accounts/', include('django.contrib.auth.urls')),
     path('', include('CalendarApp.urls')),
     path('management/', include('ManagementApp.urls')),
-    path('ckeditor/', include('ckeditor_uploader.urls')),
 ]
 
 # Serve media files in development
