@@ -31,7 +31,7 @@ SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-jqy9)fz)vwf40q!9ry(^8t0np%
 DEBUG = os.getenv('DEBUG', 'True').lower() == 'true'
 
 #ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '34.219.105.90', 'localhost,127.0.0.1').split(',') if os.getenv('ALLOWED_HOSTS') else []
-ALLOWED_HOSTS = ['34.219.105.90', 'localhost', '127.0.0.1', '44.231.230.60', 'regulustug.com']
+ALLOWED_HOSTS = ['34.219.105.90', 'localhost', '127.0.0.1', '44.231.230.60', 'regulustug.com', 'www.regulustug.com']
 
 
 # Application definition
