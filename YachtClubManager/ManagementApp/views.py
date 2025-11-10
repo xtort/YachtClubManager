@@ -5,6 +5,10 @@ from django.urls import reverse_lazy
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth import get_user_model
 from django.core.exceptions import PermissionDenied
+from django.http import JsonResponse
+from django.views.decorators.http import require_http_methods
+from django.contrib.auth.decorators import login_required
+import json
 from CalendarApp.models import EventCategory, Event
 from .models import Role, MemberType
 from .forms import EventCategoryForm, ClubUserCreateForm, ClubUserUpdateForm, ProfileUpdateForm, MemberTypeForm, RoleForm
@@ -318,6 +322,11 @@ class MemberTypeCreateView(UserManagementRequiredMixin, CreateView):
     success_url = reverse_lazy('management:member_type_list')
 
     def form_valid(self, form):
+        # Count existing rows in the MemberType table
+        existing_count = MemberType.objects.count()
+        # Set display order to (count - 1)
+        form.instance.display_order = max(existing_count, 0)
+        # Add success message
         messages.success(
             self.request,
             f'Member Type "{form.cleaned_data["name"]}" has been created successfully!'
@@ -441,3 +450,33 @@ class RoleDeleteView(UserManagementRequiredMixin, DeleteView):
                 f'Role "{role_name}" has been deleted successfully!'
             )
         return super().form_valid(form)
+
+
+@login_required
+@require_http_methods(["POST"])
+def member_type_reorder(request):
+    """AJAX endpoint to reorder member types"""
+    if not (request.user.has_permission('manage_users') or request.user.is_superuser):
+        return JsonResponse({'success': False, 'error': 'Permission denied'}, status=403)
+    
+    try:
+        data = json.loads(request.body)
+        order = data.get('order', [])
+        
+        if not order:
+            return JsonResponse({'success': False, 'error': 'No order provided'})
+        
+        # Update display_order for each member type based on its position in the order
+        for index, member_type_id in enumerate(order):
+            try:
+                member_type = MemberType.objects.get(pk=member_type_id)
+                member_type.display_order = index
+                member_type.save(update_fields=['display_order'])
+            except MemberType.DoesNotExist:
+                continue
+        
+        return JsonResponse({'success': True})
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': 'Invalid JSON'}, status=400)
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)

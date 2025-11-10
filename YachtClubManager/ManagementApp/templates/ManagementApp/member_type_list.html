@@ -9,21 +9,28 @@
 </div>
 
 {% if member_types %}
+    <div class="alert alert-info">
+        <i class="bi bi-info-circle"></i> <strong>Tip:</strong> Drag and drop rows to reorder member types. The order will be saved automatically.
+    </div>
+    
     <div class="table-responsive">
-        <table class="table table-striped table-hover">
+        <table class="table table-striped table-hover" id="member-types-table">
             <thead>
                 <tr>
+                    <th style="width: 30px;"><i class="bi bi-grip-vertical"></i></th>
                     <th>Name</th>
                     <th>Description</th>
-                    <th>Display Order</th>
                     <th>Status</th>
                     <th>Members</th>
                     <th>Actions</th>
                 </tr>
             </thead>
-            <tbody>
+            <tbody id="member-types-tbody">
                 {% for member_type in member_types %}
-                    <tr>
+                    <tr data-id="{{ member_type.pk }}" draggable="true" class="draggable-row">
+                        <td class="drag-handle" style="cursor: move;">
+                            <i class="bi bi-grip-vertical text-muted"></i>
+                        </td>
                         <td><strong>{{ member_type.name }}</strong></td>
                         <td>
                             {% if member_type.description %}
@@ -32,7 +39,6 @@
                                 <em class="text-muted">No description</em>
                             {% endif %}
                         </td>
-                        <td>{{ member_type.display_order }}</td>
                         <td>
                             {% if member_type.is_active %}
                                 <span class="badge bg-success">Active</span>
@@ -63,5 +69,150 @@
         <i class="bi bi-info-circle"></i> No member types found. <a href="{% url 'management:member_type_create' %}">Create your first member type!</a>
     </div>
 {% endif %}
+
+<style>
+.draggable-row {
+    cursor: move;
+    transition: background-color 0.2s;
+}
+.draggable-row.dragging {
+    opacity: 0.5;
+    background-color: #f0f0f0;
+}
+.draggable-row.drag-over {
+    border-top: 3px solid #007bff;
+}
+.drag-handle {
+    cursor: move;
+    user-select: none;
+}
+.drag-handle:hover {
+    color: #007bff !important;
+}
+</style>
+
+<script>
+(function() {
+    const tbody = document.getElementById('member-types-tbody');
+    if (!tbody) return;
+    
+    let draggedElement = null;
+    let draggedIndex = null;
+    
+    // Make rows draggable
+    const rows = tbody.querySelectorAll('tr[draggable="true"]');
+    
+    rows.forEach((row, index) => {
+        row.addEventListener('dragstart', function(e) {
+            draggedElement = this;
+            draggedIndex = index;
+            this.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/html', this.innerHTML);
+        });
+        
+        row.addEventListener('dragend', function(e) {
+            this.classList.remove('dragging');
+            rows.forEach(r => r.classList.remove('drag-over'));
+        });
+        
+        row.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            
+            const afterElement = getDragAfterElement(tbody, e.clientY);
+            rows.forEach(r => r.classList.remove('drag-over'));
+            
+            if (afterElement == null) {
+                this.classList.add('drag-over');
+            } else {
+                afterElement.classList.add('drag-over');
+            }
+        });
+        
+        row.addEventListener('drop', function(e) {
+            e.preventDefault();
+            
+            if (draggedElement !== this) {
+                const afterElement = getDragAfterElement(tbody, e.clientY);
+                
+                if (afterElement == null) {
+                    tbody.appendChild(draggedElement);
+                } else {
+                    tbody.insertBefore(draggedElement, afterElement);
+                }
+                
+                // Save new order
+                saveOrder();
+            }
+            
+            rows.forEach(r => r.classList.remove('drag-over'));
+        });
+    });
+    
+    function getDragAfterElement(container, y) {
+        const draggableElements = [...container.querySelectorAll('tr[draggable="true"]:not(.dragging)')];
+        
+        return draggableElements.reduce((closest, child) => {
+            const box = child.getBoundingClientRect();
+            const offset = y - box.top - box.height / 2;
+            
+            if (offset < 0 && offset > closest.offset) {
+                return { offset: offset, element: child };
+            } else {
+                return closest;
+            }
+        }, { offset: Number.NEGATIVE_INFINITY }).element;
+    }
+    
+    function saveOrder() {
+        const rows = tbody.querySelectorAll('tr[draggable="true"]');
+        const order = Array.from(rows).map(row => row.getAttribute('data-id'));
+        
+        // Get CSRF token from cookie
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+        const csrftoken = getCookie('csrftoken');
+        
+        fetch('{% url "management:member_type_reorder" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrftoken
+            },
+            body: JSON.stringify({ order: order })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Show success message briefly
+                const alert = document.createElement('div');
+                alert.className = 'alert alert-success alert-dismissible fade show position-fixed';
+                alert.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+                alert.innerHTML = '<i class="bi bi-check-circle"></i> Order saved successfully!<button type="button" class="btn-close" data-bs-dismiss="alert"></button>';
+                document.body.appendChild(alert);
+                setTimeout(() => alert.remove(), 3000);
+            } else {
+                console.error('Error saving order:', data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+        });
+    }
+})();
+</script>
 {% endblock %}
 

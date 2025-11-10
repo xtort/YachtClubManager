@@ -18,7 +18,7 @@ class MemberTypeForm(forms.ModelForm):
     
     class Meta:
         model = MemberType
-        fields = ['name', 'description', 'is_active', 'display_order']
+        fields = ['name', 'description', 'is_active']
         widgets = {
             'name': forms.TextInput(attrs={
                 'class': 'form-control',
@@ -32,19 +32,14 @@ class MemberTypeForm(forms.ModelForm):
             'is_active': forms.CheckboxInput(attrs={
                 'class': 'form-check-input'
             }),
-            'display_order': forms.NumberInput(attrs={
-                'class': 'form-control',
-                'min': '0',
-            }),
         }
         labels = {
             'name': 'Member Type Name',
             'description': 'Description',
             'is_active': 'Active',
-            'display_order': 'Display Order',
         }
         help_texts = {
-            'display_order': 'Lower numbers appear first in lists. Use this to control the order.',
+            'is_active': 'Whether this member type is currently active.',
         }
 
     def clean_name(self):

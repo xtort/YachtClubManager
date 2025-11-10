@@ -21,6 +21,7 @@ urlpatterns = [
     path('member-types/create/', views.MemberTypeCreateView.as_view(), name='member_type_create'),
     path('member-types/<int:pk>/edit/', views.MemberTypeUpdateView.as_view(), name='member_type_edit'),
     path('member-types/<int:pk>/delete/', views.MemberTypeDeleteView.as_view(), name='member_type_delete'),
+    path('member-types/reorder/', views.member_type_reorder, name='member_type_reorder'),
     # Role management
     path('roles/', views.RoleListView.as_view(), name='role_list'),
     path('roles/create/', views.RoleCreateView.as_view(), name='role_create'),
