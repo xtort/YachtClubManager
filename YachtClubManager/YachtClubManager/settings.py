@@ -30,9 +30,23 @@ SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-jqy9)fz)vwf40q!9ry(^8t0np%
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv('DEBUG', 'True').lower() == 'true'
 
-#ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '34.219.105.90', 'localhost,127.0.0.1').split(',') if os.getenv('ALLOWED_HOSTS') else []
-ALLOWED_HOSTS = ['34.219.105.90', 'localhost', '127.0.0.1', '44.231.230.60', 'regulustug.com', 'www.regulustug.com']
+# Add CSRF Trusted Origins
+CSRF_TRUSTED_ORIGINS = [
+    'https://regulustug.com',
+    'https://www.regulustug.com',
+    'https://44.231.230.60',
+]
 
+#ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '34.219.105.90', 'localhost,127.0.0.1').split(',') if os.getenv('ALLOWED_HOSTS') else []
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', '44.231.230.60', 'regulustug.com', 'www.regulustug.com']
+
+# Behind Nginx proxy on HTTPS:
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+SECURE_SSL_REDIRECT = True
+
+# Hygiene for HTTPS
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = True
 
 # Application definition
 
