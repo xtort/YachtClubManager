@@ -10,8 +10,8 @@ from django.views.decorators.http import require_http_methods
 from django.contrib.auth.decorators import login_required
 import json
 from CalendarApp.models import EventCategory, Event
-from .models import Role, MemberType
-from .forms import EventCategoryForm, ClubUserCreateForm, ClubUserUpdateForm, ProfileUpdateForm, MemberTypeForm, RoleForm
+from .models import Role, MemberType, MemberTypeRelationship
+from .forms import EventCategoryForm, ClubUserCreateForm, ClubUserUpdateForm, ProfileUpdateForm, MemberTypeForm, RoleForm, MemberTypeRelationshipForm
 from .mixins import UserManagementRequiredMixin, MemberDirectoryRequiredMixin
 
 ClubUser = get_user_model()
@@ -211,6 +211,14 @@ class ClubUserUpdateView(UserManagementRequiredMixin, UpdateView):
     success_url = reverse_lazy('management:user_list')
     context_object_name = 'user'
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # Get relationship data for display
+        user = self.get_object()
+        context['parent_member'] = user.parent_member
+        context['dependent_members'] = user.dependent_members.filter(is_active=True).order_by('relationship_type', 'last_name', 'first_name')
+        return context
+
     def form_valid(self, form):
         password_changed = bool(form.cleaned_data.get('password1'))
         messages.success(
@@ -281,6 +289,14 @@ class ProfileUpdateView(LoginRequiredMixin, UpdateView):
     def get_object(self):
         """Return the current user"""
         return self.request.user
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # Get relationship data for display
+        user = self.get_object()
+        context['parent_member'] = user.parent_member
+        context['dependent_members'] = user.dependent_members.filter(is_active=True).order_by('relationship_type', 'last_name', 'first_name')
+        return context
 
     def get_form_kwargs(self):
         """Add request to form kwargs for file upload handling"""
@@ -448,6 +464,102 @@ class RoleDeleteView(UserManagementRequiredMixin, DeleteView):
             messages.success(
                 self.request,
                 f'Role "{role_name}" has been deleted successfully!'
+            )
+        return super().form_valid(form)
+
+
+# Member Type Relationship Management Views
+class MemberTypeRelationshipListView(UserManagementRequiredMixin, ListView):
+    """List view of all member type relationships"""
+    model = MemberTypeRelationship
+    template_name = 'ManagementApp/member_type_relationship_list.html'
+    context_object_name = 'relationships'
+
+    def get_queryset(self):
+        return MemberTypeRelationship.objects.select_related('parent_type', 'child_type').all().order_by('parent_type__display_order', 'child_type__display_order')
+
+
+class MemberTypeRelationshipCreateView(UserManagementRequiredMixin, CreateView):
+    """View for creating a new member type relationship"""
+    model = MemberTypeRelationship
+    form_class = MemberTypeRelationshipForm
+    template_name = 'ManagementApp/member_type_relationship_form.html'
+    success_url = reverse_lazy('management:member_type_relationship_list')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # Check if member types are configured for parent/child relationships
+        context['has_parent_types'] = MemberType.objects.filter(can_be_parent=True, is_active=True).exists()
+        context['has_child_types'] = MemberType.objects.filter(can_be_child=True, is_active=True).exists()
+        context['has_active_types'] = MemberType.objects.filter(is_active=True).exists()
+        return context
+
+    def form_valid(self, form):
+        messages.success(
+            self.request,
+            f'Relationship "{form.cleaned_data["parent_type"].name} → {form.cleaned_data["child_type"].name}" has been created successfully!'
+        )
+        return super().form_valid(form)
+
+
+class MemberTypeRelationshipUpdateView(UserManagementRequiredMixin, UpdateView):
+    """View for updating an existing member type relationship"""
+    model = MemberTypeRelationship
+    form_class = MemberTypeRelationshipForm
+    template_name = 'ManagementApp/member_type_relationship_form.html'
+    success_url = reverse_lazy('management:member_type_relationship_list')
+    context_object_name = 'relationship'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # Check if member types are configured for parent/child relationships
+        context['has_parent_types'] = MemberType.objects.filter(can_be_parent=True, is_active=True).exists()
+        context['has_child_types'] = MemberType.objects.filter(can_be_child=True, is_active=True).exists()
+        context['has_active_types'] = MemberType.objects.filter(is_active=True).exists()
+        return context
+
+    def form_valid(self, form):
+        messages.success(
+            self.request,
+            f'Relationship "{form.cleaned_data["parent_type"].name} → {form.cleaned_data["child_type"].name}" has been updated successfully!'
+        )
+        return super().form_valid(form)
+
+
+class MemberTypeRelationshipDeleteView(UserManagementRequiredMixin, DeleteView):
+    """View for deleting a member type relationship"""
+    model = MemberTypeRelationship
+    template_name = 'ManagementApp/member_type_relationship_confirm_delete.html'
+    success_url = reverse_lazy('management:member_type_relationship_list')
+    context_object_name = 'relationship'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # Check if any users are using this relationship
+        parent_type = self.object.parent_type
+        child_type = self.object.child_type
+        context['user_count'] = ClubUser.objects.filter(
+            parent_member__member_types=parent_type,
+            member_types=child_type
+        ).count()
+        return context
+
+    def form_valid(self, form):
+        relationship_name = str(self.object)
+        user_count = ClubUser.objects.filter(
+            parent_member__member_types=self.object.parent_type,
+            member_types=self.object.child_type
+        ).count()
+        
+        if user_count > 0:
+            messages.warning(
+                self.request,
+                f'Relationship "{relationship_name}" deleted. {user_count} member(s) using this relationship will remain but the relationship type will no longer be enforced.'
+            )
+        else:
+            messages.success(
+                self.request,
+                f'Relationship "{relationship_name}" has been deleted successfully!'
             )
         return super().form_valid(form)
 

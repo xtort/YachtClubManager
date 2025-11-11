@@ -40,13 +40,21 @@ CSRF_TRUSTED_ORIGINS = [
 #ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '34.219.105.90', 'localhost,127.0.0.1').split(',') if os.getenv('ALLOWED_HOSTS') else []
 ALLOWED_HOSTS = ['localhost', '127.0.0.1', '44.231.230.60', 'regulustug.com', 'www.regulustug.com']
 
-# Behind Nginx proxy on HTTPS:
-SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
-SECURE_SSL_REDIRECT = True
-
-# Hygiene for HTTPS
-SESSION_COOKIE_SECURE = True
-CSRF_COOKIE_SECURE = True
+# Security settings - only enable HTTPS in production (when DEBUG=False)
+if not DEBUG:
+    # Behind Nginx proxy on HTTPS (production only):
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    SECURE_SSL_REDIRECT = True
+    
+    # Hygiene for HTTPS (production only)
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+else:
+    # Development settings - allow HTTP
+    SECURE_SSL_REDIRECT = False
+    SESSION_COOKIE_SECURE = False
+    CSRF_COOKIE_SECURE = False
+    # Don't set SECURE_PROXY_SSL_HEADER in development
 
 # Application definition
 
@@ -95,13 +103,20 @@ WSGI_APPLICATION = 'YachtClubManager.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
+# Detect if we're running in Docker (check for /proc/self/cgroup or POSTGRES_HOST env var)
+# If POSTGRES_HOST is 'db', we're in Docker. Otherwise, use localhost for local development.
+POSTGRES_HOST_ENV = os.getenv('POSTGRES_HOST', 'localhost')
+# If host is 'db' (Docker service name) but we're not in Docker, default to localhost
+if POSTGRES_HOST_ENV == 'db' and not os.path.exists('/.dockerenv'):
+    POSTGRES_HOST_ENV = 'localhost'
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': os.getenv('POSTGRES_DB', 'YCM'),
         'USER': os.getenv('POSTGRES_USER', 'postgres'),
         'PASSWORD': os.getenv('POSTGRES_PASSWORD', ''),
-        'HOST': os.getenv('POSTGRES_HOST', '192.168.2.175'),
+        'HOST': POSTGRES_HOST_ENV,
         'PORT': os.getenv('POSTGRES_PORT', '5432'),
         'SCHEMA': os.getenv('POSTGRES_SCHEMA', 'public'),
     }

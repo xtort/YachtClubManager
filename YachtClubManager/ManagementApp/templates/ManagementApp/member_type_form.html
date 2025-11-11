@@ -47,7 +47,7 @@
                     </div>
 
                     <div class="row">
-                        <div class="col-md-12 mb-3">
+                        <div class="col-md-4 mb-3">
                             <div class="form-check">
                                 {{ form.is_active }}
                                 <label class="form-check-label" for="{{ form.is_active.id_for_label }}">
@@ -58,6 +58,34 @@
                                 {% endif %}
                                 {% if form.is_active.errors %}
                                     <div class="text-danger small">{{ form.is_active.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <div class="form-check">
+                                {{ form.can_be_parent }}
+                                <label class="form-check-label" for="{{ form.can_be_parent.id_for_label }}">
+                                    {{ form.can_be_parent.label }}
+                                </label>
+                                {% if form.can_be_parent.help_text %}
+                                    <small class="form-text text-muted d-block">{{ form.can_be_parent.help_text }}</small>
+                                {% endif %}
+                                {% if form.can_be_parent.errors %}
+                                    <div class="text-danger small">{{ form.can_be_parent.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <div class="form-check">
+                                {{ form.can_be_child }}
+                                <label class="form-check-label" for="{{ form.can_be_child.id_for_label }}">
+                                    {{ form.can_be_child.label }}
+                                </label>
+                                {% if form.can_be_child.help_text %}
+                                    <small class="form-text text-muted d-block">{{ form.can_be_child.help_text }}</small>
+                                {% endif %}
+                                {% if form.can_be_child.errors %}
+                                    <div class="text-danger small">{{ form.can_be_child.errors }}</div>
                                 {% endif %}
                             </div>
                         </div>

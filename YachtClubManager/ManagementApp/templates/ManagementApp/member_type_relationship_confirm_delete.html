@@ -1,0 +1,48 @@
+{% extends 'ManagementApp/base_management.html' %}
+
+{% block management_content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-danger text-white">
+                <h2 class="mb-0">
+                    <i class="bi bi-exclamation-triangle"></i> Delete Relationship
+                </h2>
+            </div>
+            <div class="card-body">
+                <p class="lead">Are you sure you want to delete this relationship?</p>
+                
+                <div class="alert alert-warning">
+                    <strong>Relationship Details:</strong><br>
+                    <strong>Parent Type:</strong> {{ relationship.parent_type.name }}<br>
+                    <strong>Child Type:</strong> {{ relationship.child_type.name }}<br>
+                    <strong>Relationship Name:</strong> {{ relationship.relationship_name }}
+                </div>
+                
+                {% if user_count > 0 %}
+                    <div class="alert alert-danger">
+                        <i class="bi bi-exclamation-triangle"></i> <strong>Warning:</strong> 
+                        There {{ user_count|pluralize:"is,are" }} currently {{ user_count }} member{{ user_count|pluralize }} using this relationship. 
+                        Deleting this relationship will not remove the parent-child links, but the relationship type will no longer be enforced.
+                    </div>
+                {% else %}
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i> No members are currently using this relationship.
+                    </div>
+                {% endif %}
+                
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{% url 'management:member_type_relationship_list' %}" class="btn btn-outline-secondary">Cancel</a>
+                        <button type="submit" class="btn btn-danger">
+                            <i class="bi bi-trash"></i> Delete Relationship
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

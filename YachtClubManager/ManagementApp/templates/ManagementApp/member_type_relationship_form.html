@@ -1,0 +1,121 @@
+{% extends 'ManagementApp/base_management.html' %}
+
+{% block management_content %}
+<div class="row justify-content-center">
+    <div class="col-md-10">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h2 class="mb-0">
+                    <i class="bi bi-{% if object %}pencil{% else %}plus-circle{% endif %}"></i>
+                    {% if object %}Edit Relationship{% else %}Create New Relationship{% endif %}
+                </h2>
+            </div>
+            <div class="card-body">
+                <form method="post" novalidate>
+                    {% csrf_token %}
+                    
+                    {% if form.non_field_errors %}
+                        <div class="alert alert-danger">
+                            {{ form.non_field_errors }}
+                        </div>
+                    {% endif %}
+                    
+                    {% if not has_active_types %}
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle"></i> <strong>No Member Types Found:</strong> 
+                            You need to create member types before creating relationships. 
+                            <a href="{% url 'management:member_type_create' %}" class="alert-link">Create a Member Type</a>
+                        </div>
+                    {% elif not has_parent_types or not has_child_types %}
+                        <div class="alert alert-warning">
+                            <i class="bi bi-exclamation-triangle"></i> <strong>Configuration Required:</strong> 
+                            Before creating relationships, you need to configure member types. 
+                            <a href="{% url 'management:member_type_list' %}" class="alert-link">Go to Member Types</a> 
+                            and enable "Can Be Parent" or "Can Be Child" for the appropriate types.
+                        </div>
+                    {% endif %}
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.parent_type.id_for_label }}" class="form-label">
+                                {{ form.parent_type.label }}
+                            </label>
+                            {{ form.parent_type }}
+                            {% if form.parent_type.help_text %}
+                                <small class="form-text {% if '⚠️' in form.parent_type.help_text %}text-warning{% else %}text-muted{% endif %}">
+                                    {{ form.parent_type.help_text }}
+                                </small>
+                            {% endif %}
+                            {% if form.parent_type.errors %}
+                                <div class="text-danger small">{{ form.parent_type.errors }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.child_type.id_for_label }}" class="form-label">
+                                {{ form.child_type.label }}
+                            </label>
+                            {{ form.child_type }}
+                            {% if form.child_type.help_text %}
+                                <small class="form-text {% if '⚠️' in form.child_type.help_text %}text-warning{% else %}text-muted{% endif %}">
+                                    {{ form.child_type.help_text }}
+                                </small>
+                            {% endif %}
+                            {% if form.child_type.errors %}
+                                <div class="text-danger small">{{ form.child_type.errors }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.relationship_name.id_for_label }}" class="form-label">
+                                {{ form.relationship_name.label }}
+                            </label>
+                            {{ form.relationship_name }}
+                            {% if form.relationship_name.help_text %}
+                                <small class="form-text text-muted">{{ form.relationship_name.help_text }}</small>
+                            {% endif %}
+                            {% if form.relationship_name.errors %}
+                                <div class="text-danger small">{{ form.relationship_name.errors }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.max_children.id_for_label }}" class="form-label">
+                                {{ form.max_children.label }}
+                            </label>
+                            {{ form.max_children }}
+                            {% if form.max_children.help_text %}
+                                <small class="form-text text-muted">{{ form.max_children.help_text }}</small>
+                            {% endif %}
+                            {% if form.max_children.errors %}
+                                <div class="text-danger small">{{ form.max_children.errors }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="mb-3 form-check">
+                        {{ form.is_active }}
+                        <label class="form-check-label" for="{{ form.is_active.id_for_label }}">
+                            {{ form.is_active.label }}
+                        </label>
+                        {% if form.is_active.help_text %}
+                            <small class="form-text text-muted d-block">{{ form.is_active.help_text }}</small>
+                        {% endif %}
+                        {% if form.is_active.errors %}
+                            <div class="text-danger small">{{ form.is_active.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{% url 'management:member_type_relationship_list' %}" class="btn btn-outline-secondary">Cancel</a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-circle"></i> {% if object %}Update{% else %}Create{% endif %} Relationship
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

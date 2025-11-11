@@ -21,6 +21,8 @@
                     <th>Name</th>
                     <th>Description</th>
                     <th>Status</th>
+                    <th>Can Be Parent</th>
+                    <th>Can Be Child</th>
                     <th>Members</th>
                     <th>Actions</th>
                 </tr>
@@ -44,6 +46,20 @@
                                 <span class="badge bg-success">Active</span>
                             {% else %}
                                 <span class="badge bg-secondary">Inactive</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if member_type.can_be_parent %}
+                                <span class="badge bg-primary"><i class="bi bi-check-circle"></i> Yes</span>
+                            {% else %}
+                                <span class="badge bg-secondary"><i class="bi bi-x-circle"></i> No</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if member_type.can_be_child %}
+                                <span class="badge bg-info"><i class="bi bi-check-circle"></i> Yes</span>
+                            {% else %}
+                                <span class="badge bg-secondary"><i class="bi bi-x-circle"></i> No</span>
                             {% endif %}
                         </td>
                         <td>

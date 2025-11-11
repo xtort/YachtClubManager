@@ -498,6 +498,73 @@
                             </div>
                         </div>
 
+                        <!-- FAMILY RELATIONSHIPS -->
+                        {% if parent_member or dependent_members %}
+                            <div class="form-section">
+                                <div class="section-header">
+                                    <i class="bi bi-diagram-3"></i> Family Relationships
+                                </div>
+                                
+                                <div class="row">
+                                    {% if parent_member %}
+                                        <div class="col-md-6 mb-3">
+                                            <div class="card border-primary h-100">
+                                                <div class="card-header bg-primary text-white">
+                                                    <i class="bi bi-arrow-up-circle"></i> Parent Member
+                                                </div>
+                                                <div class="card-body">
+                                                    <h6 class="card-title">{{ parent_member.get_full_name }}</h6>
+                                                    <p class="card-text mb-1">
+                                                        <strong>Relationship:</strong> 
+                                                        <span class="badge bg-info">{{ user.relationship_type|default:"N/A" }}</span>
+                                                    </p>
+                                                    <p class="card-text mb-1">
+                                                        <strong>Email:</strong> 
+                                                        <a href="mailto:{{ parent_member.email }}">{{ parent_member.email }}</a>
+                                                    </p>
+                                                    {% if parent_member.primary_phone_number %}
+                                                        <p class="card-text mb-0">
+                                                            <strong>Phone:</strong> 
+                                                            <a href="tel:{{ parent_member.primary_phone_number }}">{{ parent_member.primary_phone_number }}</a>
+                                                        </p>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    {% endif %}
+                                    
+                                    {% if dependent_members %}
+                                        <div class="col-md-{% if parent_member %}6{% else %}12{% endif %} mb-3">
+                                            <div class="card border-success h-100">
+                                                <div class="card-header bg-success text-white">
+                                                    <i class="bi bi-arrow-down-circle"></i> Dependent Members ({{ dependent_members|length }})
+                                                </div>
+                                                <div class="card-body">
+                                                    <div class="list-group list-group-flush">
+                                                        {% for dependent in dependent_members %}
+                                                            <div class="list-group-item px-0">
+                                                                <h6 class="mb-1">{{ dependent.get_full_name }}</h6>
+                                                                <p class="mb-1 small">
+                                                                    <strong>Relationship:</strong> 
+                                                                    <span class="badge bg-info">{{ dependent.relationship_type|default:"N/A" }}</span>
+                                                                </p>
+                                                                <p class="mb-0 small text-muted">
+                                                                    <a href="mailto:{{ dependent.email }}">{{ dependent.email }}</a>
+                                                                    {% if dependent.primary_phone_number %} • 
+                                                                        <a href="tel:{{ dependent.primary_phone_number }}">{{ dependent.primary_phone_number }}</a>
+                                                                    {% endif %}
+                                                                </p>
+                                                            </div>
+                                                        {% endfor %}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        {% endif %}
+
                         <!-- READONLY ROLE -->
                         <div class="form-section">
                             <div class="mb-3">

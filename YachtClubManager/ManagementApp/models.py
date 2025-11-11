@@ -119,6 +119,8 @@ class MemberType(models.Model):
     description = models.TextField(blank=True, help_text='Description of this member type')
     is_active = models.BooleanField(default=True, help_text='Whether this member type is currently active')
     display_order = models.IntegerField(default=0, help_text='Order in which to display this member type')
+    can_be_parent = models.BooleanField(default=False, help_text='Members with this type can be parents of dependent members')
+    can_be_child = models.BooleanField(default=False, help_text='Members with this type can be children/dependents of parent members')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
@@ -129,6 +131,44 @@ class MemberType(models.Model):
     
     def __str__(self):
         return self.name
+
+
+class MemberTypeRelationship(models.Model):
+    """Defines which member types can be parents of which child types"""
+    parent_type = models.ForeignKey(
+        MemberType,
+        on_delete=models.CASCADE,
+        related_name='child_relationships',
+        help_text='Parent member type'
+    )
+    child_type = models.ForeignKey(
+        MemberType,
+        on_delete=models.CASCADE,
+        related_name='parent_relationships',
+        help_text='Child/dependent member type'
+    )
+    relationship_name = models.CharField(
+        max_length=50,
+        default='Child',
+        help_text='Name of the relationship (e.g., "Child", "Spouse", "First Mate")'
+    )
+    max_children = models.IntegerField(
+        null=True,
+        blank=True,
+        help_text='Maximum number of children of this type allowed per parent (leave blank for unlimited)'
+    )
+    is_active = models.BooleanField(default=True, help_text='Whether this relationship is currently active')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['parent_type__display_order', 'child_type__display_order']
+        unique_together = [['parent_type', 'child_type']]
+        verbose_name = 'Member Type Relationship'
+        verbose_name_plural = 'Member Type Relationships'
+    
+    def __str__(self):
+        return f"{self.parent_type.name} → {self.child_type.name} ({self.relationship_name})"
 
 
 class Role(models.Model):
@@ -307,6 +347,21 @@ class ClubUser(AbstractBaseUser, PermissionsMixin):
         related_name='members',
         blank=True,
         help_text='Member types assigned to this user (at least one required)'
+    )
+    
+    # Parent/Child relationships
+    parent_member = models.ForeignKey(
+        'self',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='dependent_members',
+        help_text='Parent member if this is a dependent/child member'
+    )
+    relationship_type = models.CharField(
+        max_length=50,
+        blank=True,
+        help_text='Type of relationship to parent (e.g., "Child", "Spouse", "First Mate")'
     )
     
     # Account status

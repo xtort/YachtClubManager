@@ -22,6 +22,11 @@ urlpatterns = [
     path('member-types/<int:pk>/edit/', views.MemberTypeUpdateView.as_view(), name='member_type_edit'),
     path('member-types/<int:pk>/delete/', views.MemberTypeDeleteView.as_view(), name='member_type_delete'),
     path('member-types/reorder/', views.member_type_reorder, name='member_type_reorder'),
+    # Member Type Relationship management
+    path('member-type-relationships/', views.MemberTypeRelationshipListView.as_view(), name='member_type_relationship_list'),
+    path('member-type-relationships/create/', views.MemberTypeRelationshipCreateView.as_view(), name='member_type_relationship_create'),
+    path('member-type-relationships/<int:pk>/edit/', views.MemberTypeRelationshipUpdateView.as_view(), name='member_type_relationship_edit'),
+    path('member-type-relationships/<int:pk>/delete/', views.MemberTypeRelationshipDeleteView.as_view(), name='member_type_relationship_delete'),
     # Role management
     path('roles/', views.RoleListView.as_view(), name='role_list'),
     path('roles/create/', views.RoleCreateView.as_view(), name='role_create'),

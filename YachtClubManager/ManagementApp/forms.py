@@ -2,7 +2,7 @@ from django import forms
 from django.contrib.auth import get_user_model
 from django.core.validators import RegexValidator
 from CalendarApp.models import EventCategory
-from .models import Role, MemberType, SALUTATION_CHOICES, COUNTRIES, US_STATES, VESSEL_TYPE_CHOICES, VESSEL_POWER_CHOICES, VESSEL_TIE_CHOICES
+from .models import Role, MemberType, MemberTypeRelationship, SALUTATION_CHOICES, COUNTRIES, US_STATES, VESSEL_TYPE_CHOICES, VESSEL_POWER_CHOICES, VESSEL_TIE_CHOICES
 import pytz
 
 ClubUser = get_user_model()
@@ -18,7 +18,7 @@ class MemberTypeForm(forms.ModelForm):
     
     class Meta:
         model = MemberType
-        fields = ['name', 'description', 'is_active']
+        fields = ['name', 'description', 'is_active', 'can_be_parent', 'can_be_child']
         widgets = {
             'name': forms.TextInput(attrs={
                 'class': 'form-control',
@@ -32,14 +32,24 @@ class MemberTypeForm(forms.ModelForm):
             'is_active': forms.CheckboxInput(attrs={
                 'class': 'form-check-input'
             }),
+            'can_be_parent': forms.CheckboxInput(attrs={
+                'class': 'form-check-input'
+            }),
+            'can_be_child': forms.CheckboxInput(attrs={
+                'class': 'form-check-input'
+            }),
         }
         labels = {
             'name': 'Member Type Name',
             'description': 'Description',
             'is_active': 'Active',
+            'can_be_parent': 'Can Be Parent',
+            'can_be_child': 'Can Be Child/Dependent',
         }
         help_texts = {
             'is_active': 'Whether this member type is currently active.',
+            'can_be_parent': 'Members with this type can have dependent members (children, spouses, etc.)',
+            'can_be_child': 'Members with this type can be assigned to a parent member',
         }
 
     def clean_name(self):
@@ -47,6 +57,90 @@ class MemberTypeForm(forms.ModelForm):
         if name:
             name = name.strip()
         return name
+
+
+class MemberTypeRelationshipForm(forms.ModelForm):
+    """Form for creating and editing member type relationships"""
+    
+    class Meta:
+        model = MemberTypeRelationship
+        fields = ['parent_type', 'child_type', 'relationship_name', 'max_children', 'is_active']
+        widgets = {
+            'parent_type': forms.Select(attrs={
+                'class': 'form-control'
+            }),
+            'child_type': forms.Select(attrs={
+                'class': 'form-control'
+            }),
+            'relationship_name': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'e.g., Child, Spouse, First Mate'
+            }),
+            'max_children': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'min': '1',
+                'placeholder': 'Leave blank for unlimited'
+            }),
+            'is_active': forms.CheckboxInput(attrs={
+                'class': 'form-check-input'
+            }),
+        }
+        labels = {
+            'parent_type': 'Parent Member Type',
+            'child_type': 'Child/Dependent Member Type',
+            'relationship_name': 'Relationship Name',
+            'max_children': 'Maximum Children Per Parent',
+            'is_active': 'Active',
+        }
+        help_texts = {
+            'relationship_name': 'Name of the relationship (e.g., "Child", "Spouse", "First Mate")',
+            'max_children': 'Maximum number of children of this type allowed per parent. Leave blank for unlimited.',
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Show all active member types, but prefer those configured as parent/child
+        # This allows users to see all options and configure member types if needed
+        all_active_types = MemberType.objects.filter(is_active=True).order_by('display_order', 'name')
+        
+        # For parent type: show all active types, but prioritize those that can be parents
+        parent_types = MemberType.objects.filter(can_be_parent=True, is_active=True).order_by('display_order', 'name')
+        if parent_types.exists():
+            self.fields['parent_type'].queryset = parent_types
+        else:
+            # If no types are configured as parents, show all active types with a warning
+            self.fields['parent_type'].queryset = all_active_types
+        
+        # For child type: show all active types, but prioritize those that can be children
+        child_types = MemberType.objects.filter(can_be_child=True, is_active=True).order_by('display_order', 'name')
+        if child_types.exists():
+            self.fields['child_type'].queryset = child_types
+        else:
+            # If no types are configured as children, show all active types with a warning
+            self.fields['child_type'].queryset = all_active_types
+        
+        # Add help text if no types are configured
+        if not parent_types.exists():
+            self.fields['parent_type'].help_text = '⚠️ No member types are configured to be parents. Please edit member types and enable "Can Be Parent" first.'
+        if not child_types.exists():
+            self.fields['child_type'].help_text = '⚠️ No member types are configured to be children. Please edit member types and enable "Can Be Child" first.'
+    
+    def clean(self):
+        cleaned_data = super().clean()
+        parent_type = cleaned_data.get('parent_type')
+        child_type = cleaned_data.get('child_type')
+        
+        if parent_type and child_type:
+            if parent_type == child_type:
+                raise forms.ValidationError('Parent and child types cannot be the same.')
+            
+            if not parent_type.can_be_parent:
+                raise forms.ValidationError(f'"{parent_type.name}" is not configured to be a parent type.')
+            
+            if not child_type.can_be_child:
+                raise forms.ValidationError(f'"{child_type.name}" is not configured to be a child type.')
+        
+        return cleaned_data
 
 
 class RoleForm(forms.ModelForm):
@@ -159,6 +253,28 @@ class ClubUserCreateForm(forms.ModelForm):
         widget=forms.PasswordInput(attrs={'class': 'form-control'}),
         help_text='Enter the same password as above, for verification.'
     )
+    
+    is_dependent = forms.BooleanField(
+        required=False,
+        label='Is this a dependent/child member?',
+        widget=forms.CheckboxInput(attrs={'class': 'form-check-input', 'id': 'id_is_dependent'}),
+        help_text='Check if this member is a dependent (child, spouse, etc.) of another member'
+    )
+    
+    parent_member = forms.ModelChoiceField(
+        queryset=ClubUser.objects.none(),
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-control', 'id': 'id_parent_member'}),
+        label='Parent Member',
+        help_text='Select the parent member if this is a dependent'
+    )
+    
+    relationship_type = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'id': 'id_relationship_type'}),
+        label='Relationship Type',
+        help_text='Type of relationship (e.g., Child, Spouse, First Mate)'
+    )
 
     class Meta:
         model = ClubUser
@@ -184,6 +300,15 @@ class ClubUserCreateForm(forms.ModelForm):
         help_texts = {
             'member_types': 'Select at least one member type. Hold Ctrl/Cmd to select multiple.',
         }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Set queryset for parent member - only show members who can be parents
+        parent_member_types = MemberType.objects.filter(can_be_parent=True, is_active=True)
+        self.fields['parent_member'].queryset = ClubUser.objects.filter(
+            member_types__in=parent_member_types,
+            is_active=True
+        ).distinct().order_by('last_name', 'first_name')
 
     def clean_email(self):
         email = self.cleaned_data.get('email')
@@ -203,10 +328,54 @@ class ClubUserCreateForm(forms.ModelForm):
         if not member_types:
             raise forms.ValidationError('At least one member type must be selected.')
         return member_types
+    
+    def clean(self):
+        cleaned_data = super().clean()
+        is_dependent = cleaned_data.get('is_dependent')
+        parent_member = cleaned_data.get('parent_member')
+        relationship_type = cleaned_data.get('relationship_type')
+        member_types = cleaned_data.get('member_types')
+        
+        if is_dependent:
+            if not parent_member:
+                raise forms.ValidationError({'parent_member': 'Parent member is required for dependent members.'})
+            
+            if not relationship_type:
+                raise forms.ValidationError({'relationship_type': 'Relationship type is required for dependent members.'})
+            
+            # Validate that the member types allow being a child
+            if member_types:
+                child_types = [mt for mt in member_types if mt.can_be_child]
+                if not child_types:
+                    raise forms.ValidationError({'member_types': 'At least one selected member type must be configured to allow being a child/dependent.'})
+                
+                # Check if there's a valid relationship between parent's types and child's types
+                parent_types = parent_member.member_types.filter(can_be_parent=True)
+                valid_relationship = MemberTypeRelationship.objects.filter(
+                    parent_type__in=parent_types,
+                    child_type__in=child_types,
+                    is_active=True
+                ).exists()
+                
+                if not valid_relationship:
+                    raise forms.ValidationError({
+                        'member_types': 'No valid parent-child relationship exists between the selected member types and the parent member\'s types.'
+                    })
+        
+        return cleaned_data
 
     def save(self, commit=True):
         user = super().save(commit=False)
         user.set_password(self.cleaned_data['password1'])  # Django handles salting/hashing
+        
+        # Set parent relationship if this is a dependent
+        if self.cleaned_data.get('is_dependent'):
+            user.parent_member = self.cleaned_data.get('parent_member')
+            user.relationship_type = self.cleaned_data.get('relationship_type', '')
+        else:
+            user.parent_member = None
+            user.relationship_type = ''
+        
         if commit:
             user.save()
             # Save many-to-many relationships
@@ -227,6 +396,28 @@ class ClubUserUpdateForm(forms.ModelForm):
         widget=forms.PasswordInput(attrs={'class': 'form-control'}),
         required=False
     )
+    
+    is_dependent = forms.BooleanField(
+        required=False,
+        label='Is this a dependent/child member?',
+        widget=forms.CheckboxInput(attrs={'class': 'form-check-input', 'id': 'id_is_dependent'}),
+        help_text='Check if this member is a dependent (child, spouse, etc.) of another member'
+    )
+    
+    parent_member = forms.ModelChoiceField(
+        queryset=ClubUser.objects.none(),
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-control', 'id': 'id_parent_member'}),
+        label='Parent Member',
+        help_text='Select the parent member if this is a dependent'
+    )
+    
+    relationship_type = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'id': 'id_relationship_type'}),
+        label='Relationship Type',
+        help_text='Type of relationship (e.g., Child, Spouse, First Mate)'
+    )
 
     class Meta:
         model = ClubUser
@@ -252,6 +443,27 @@ class ClubUserUpdateForm(forms.ModelForm):
         help_texts = {
             'member_types': 'Select at least one member type. Hold Ctrl/Cmd to select multiple.',
         }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Set queryset for parent member - only show members who can be parents
+        parent_member_types = MemberType.objects.filter(can_be_parent=True, is_active=True)
+        # Exclude self from parent options
+        parent_queryset = ClubUser.objects.filter(
+            member_types__in=parent_member_types,
+            is_active=True
+        ).distinct().order_by('last_name', 'first_name')
+        
+        if self.instance and self.instance.pk:
+            parent_queryset = parent_queryset.exclude(pk=self.instance.pk)
+        
+        self.fields['parent_member'].queryset = parent_queryset
+        
+        # Set initial values if editing existing user
+        if self.instance and self.instance.pk:
+            self.fields['is_dependent'].initial = bool(self.instance.parent_member)
+            self.fields['parent_member'].initial = self.instance.parent_member
+            self.fields['relationship_type'].initial = self.instance.relationship_type
 
     def clean_email(self):
         email = self.cleaned_data.get('email')
@@ -274,12 +486,60 @@ class ClubUserUpdateForm(forms.ModelForm):
         if not member_types:
             raise forms.ValidationError('At least one member type must be selected.')
         return member_types
+    
+    def clean(self):
+        cleaned_data = super().clean()
+        is_dependent = cleaned_data.get('is_dependent')
+        parent_member = cleaned_data.get('parent_member')
+        relationship_type = cleaned_data.get('relationship_type')
+        member_types = cleaned_data.get('member_types')
+        
+        if is_dependent:
+            if not parent_member:
+                raise forms.ValidationError({'parent_member': 'Parent member is required for dependent members.'})
+            
+            if not relationship_type:
+                raise forms.ValidationError({'relationship_type': 'Relationship type is required for dependent members.'})
+            
+            # Prevent circular relationships
+            if self.instance and self.instance.pk and parent_member.pk == self.instance.pk:
+                raise forms.ValidationError({'parent_member': 'A member cannot be their own parent.'})
+            
+            # Validate that the member types allow being a child
+            if member_types:
+                child_types = [mt for mt in member_types if mt.can_be_child]
+                if not child_types:
+                    raise forms.ValidationError({'member_types': 'At least one selected member type must be configured to allow being a child/dependent.'})
+                
+                # Check if there's a valid relationship between parent's types and child's types
+                parent_types = parent_member.member_types.filter(can_be_parent=True)
+                valid_relationship = MemberTypeRelationship.objects.filter(
+                    parent_type__in=parent_types,
+                    child_type__in=child_types,
+                    is_active=True
+                ).exists()
+                
+                if not valid_relationship:
+                    raise forms.ValidationError({
+                        'member_types': 'No valid parent-child relationship exists between the selected member types and the parent member\'s types.'
+                    })
+        
+        return cleaned_data
 
     def save(self, commit=True):
         user = super().save(commit=False)
         password = self.cleaned_data.get('password1')
         if password:
             user.set_password(password)  # Django handles salting/hashing
+        
+        # Set parent relationship if this is a dependent
+        if self.cleaned_data.get('is_dependent'):
+            user.parent_member = self.cleaned_data.get('parent_member')
+            user.relationship_type = self.cleaned_data.get('relationship_type', '')
+        else:
+            user.parent_member = None
+            user.relationship_type = ''
+        
         if commit:
             user.save()
             # Save many-to-many relationships
