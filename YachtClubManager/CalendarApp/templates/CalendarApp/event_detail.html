@@ -82,7 +82,7 @@
                 {% if registration_count > 0 %}
                     <p class="mb-1">
                         <strong>Registered:</strong> 
-                        {{ registration_count }} {% if registration_count == 1 %}person{% else %}people{% endif %}
+                        {{ event.get_total_registrants_count }} {% if event.get_total_registrants_count == 1 %}person{% else %}people{% endif %}                        
                     </p>
                 {% endif %}
                 

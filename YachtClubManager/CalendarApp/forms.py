@@ -271,7 +271,7 @@ class EventRegistrationForm(forms.ModelForm):
     
     class Meta:
         model = EventRegistration
-        fields = ['notes']
+        fields = ['notes', 'additional_members']
         widgets = {
             'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Additional notes or special requests...'}),
         }

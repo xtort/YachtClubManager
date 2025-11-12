@@ -141,8 +141,19 @@ class Event(models.Model):
         return self.registrations.filter(member=user, cancelled=False).exists()
     
     def get_registration_count(self):
-        """Get the count of active registrations"""
+        """Get the count of active registrations (primary members only)"""
         return self.registrations.filter(cancelled=False).count()
+    
+    def get_total_registrants_count(self):
+        """Get the total count of all registrants (primary + additional members) for non-cancelled registrations"""
+        from django.db.models import Count
+        active_registrations = self.registrations.filter(cancelled=False)
+        primary_count = active_registrations.count()  # Primary members
+        # Count additional members using aggregation to avoid N+1 queries
+        additional_count = active_registrations.aggregate(
+            total_additional=Count('additional_members')
+        )['total_additional'] or 0
+        return primary_count + additional_count
     
     def get_allowed_member_types(self):
         """Get member types allowed to register for this event"""
