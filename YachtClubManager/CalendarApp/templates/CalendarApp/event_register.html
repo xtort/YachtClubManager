@@ -1,0 +1,240 @@
+{% extends 'CalendarApp/base.html' %}
+{% load event_permissions %}
+
+{% block title %}Register for {{ event.title }} - Yacht Club Manager{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <a href="{% url 'calendar:event_detail' event.pk %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Back to Event
+    </a>
+</div>
+
+<div class="card">
+    <div class="card-header bg-success text-white">
+        <h2 class="mb-0">
+            <i class="bi bi-clipboard-check"></i> Register for {{ event.title }}
+        </h2>
+    </div>
+    <div class="card-body">
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle"></i> <strong>Event Details:</strong><br>
+            <strong>Date:</strong> {{ event.start_datetime|date:"F d, Y" }}<br>
+            <strong>Time:</strong> {{ event.start_datetime|time:"g:i A" }} - {{ event.end_datetime|time:"g:i A" }}
+        </div>
+        
+        <form method="post" novalidate>
+            {% csrf_token %}
+            
+            {% if registration_form.non_field_errors %}
+                <div class="alert alert-danger">
+                    {{ registration_form.non_field_errors }}
+                </div>
+            {% endif %}
+            
+            <!-- Always render guest formset management form, even if guests aren't allowed -->
+            {{ guest_formset.management_form }}
+            
+            <!-- Primary Member Info (Read-only) -->
+            <div class="mb-4">
+                <h5 class="mb-3">
+                    <i class="bi bi-person-circle"></i> Primary Registrant
+                </h5>
+                <div class="card bg-light">
+                    <div class="card-body">
+                        <p class="mb-1"><strong>Name:</strong> {{ user.get_full_name }}</p>
+                        <p class="mb-1"><strong>Email:</strong> {{ user.email }}</p>
+                        {% if user.primary_phone_number %}
+                            <p class="mb-0"><strong>Phone:</strong> {{ user.primary_phone_number }}</p>
+                        {% endif %}
+                        {% if user.member_types.exists %}
+                            <p class="mb-0 mt-2">
+                                <strong>Member Types:</strong>
+                                {% for mt in user.member_types.all %}
+                                    <span class="badge bg-info">{{ mt.name }}</span>
+                                {% endfor %}
+                            </p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Child Members Section -->
+            {% if available_child_members %}
+                <div class="mb-4">
+                    <h5 class="mb-3">
+                        <i class="bi bi-people"></i> Include Child Members
+                    </h5>
+                    <p class="text-muted small mb-3">{{ registration_form.additional_members.help_text }}</p>
+                    
+                    <div class="card">
+                        <div class="card-body">
+                            {% for member in available_child_members %}
+                                <div class="form-check mb-3">
+                                    <input 
+                                        class="form-check-input" 
+                                        type="checkbox" 
+                                        name="additional_members" 
+                                        value="{{ member.pk }}" 
+                                        id="member_{{ member.pk }}"
+                                    >
+                                    <label class="form-check-label" for="member_{{ member.pk }}">
+                                        <strong>{{ member.get_full_name }}</strong>
+                                        <span class="badge bg-secondary">{{ member.relationship_type|default:"Child" }}</span>
+                                        {% if member.member_types.exists %}
+                                            {% for mt in member.member_types.all %}
+                                                <span class="badge bg-info">{{ mt.name }}</span>
+                                                {% if fee_info %}
+                                                    {% for fee_pk, fee_amount in fee_info.items %}
+                                                        {% if mt.pk|stringformat:"s" == fee_pk %}
+                                                            <span class="badge bg-success">Fee: ${{ fee_amount }}</span>
+                                                        {% endif %}
+                                                    {% endfor %}
+                                                {% endif %}
+                                            {% endfor %}
+                                        {% endif %}
+                                    </label>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% if registration_form.additional_members.errors %}
+                        <div class="text-danger small">{{ registration_form.additional_members.errors }}</div>
+                    {% endif %}
+                </div>
+            {% else %}
+                <!-- Show message if user has child members but none match allowed types -->
+                {% if user.dependent_members.exists %}
+                    <div class="mb-4">
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle"></i> {{ registration_form.additional_members.help_text }}
+                        </div>
+                    </div>
+                {% endif %}
+            {% endif %}
+            
+            <!-- Guests Section -->
+            {% if guests_allowed %}
+                <div class="mb-4">
+                    <h5 class="mb-3">
+                        <i class="bi bi-person-plus"></i> Add Guests (Non-Members)
+                    </h5>
+                    <p class="text-muted small mb-3">Add non-member guests who will attend this event.</p>
+                    
+                    <div id="guest-formset">
+                        {% for guest_form in guest_formset %}
+                            <div class="card mb-3 guest-form-row" data-form-index="{{ forloop.counter0 }}">
+                                <div class="card-body">
+                                    {% if guest_form.DELETE %}
+                                        <div class="form-check mb-2">
+                                            {{ guest_form.DELETE }}
+                                            <label class="form-check-label" for="{{ guest_form.DELETE.id_for_label }}">
+                                                Remove this guest
+                                            </label>
+                                        </div>
+                                    {% endif %}
+                                    
+                                    <div class="row">
+                                        <div class="col-md-4 mb-3">
+                                            <label for="{{ guest_form.name.id_for_label }}" class="form-label">
+                                                {{ guest_form.name.label }}
+                                            </label>
+                                            {{ guest_form.name }}
+                                            {% if guest_form.name.errors %}
+                                                <div class="text-danger small">{{ guest_form.name.errors }}</div>
+                                            {% endif %}
+                                        </div>
+                                        <div class="col-md-4 mb-3">
+                                            <label for="{{ guest_form.email.id_for_label }}" class="form-label">
+                                                {{ guest_form.email.label }}
+                                            </label>
+                                            {{ guest_form.email }}
+                                            {% if guest_form.email.errors %}
+                                                <div class="text-danger small">{{ guest_form.email.errors }}</div>
+                                            {% endif %}
+                                        </div>
+                                        <div class="col-md-4 mb-3">
+                                            <label for="{{ guest_form.phone_number.id_for_label }}" class="form-label">
+                                                {{ guest_form.phone_number.label }}
+                                            </label>
+                                            {{ guest_form.phone_number }}
+                                            {% if guest_form.phone_number.errors %}
+                                                <div class="text-danger small">{{ guest_form.phone_number.errors }}</div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                    
+                    <button type="button" class="btn btn-outline-secondary mt-2" id="add-guest-button">
+                        <i class="bi bi-plus-circle"></i> Add Another Guest
+                    </button>
+                    
+                    {% if guest_formset.non_form_errors %}
+                        <div class="alert alert-danger mt-3">
+                            {{ guest_formset.non_form_errors }}
+                        </div>
+                    {% endif %}
+                </div>
+            {% endif %}
+            
+            <!-- Notes Section -->
+            <div class="mb-4">
+                <h5 class="mb-3">
+                    <i class="bi bi-sticky"></i> Additional Notes
+                </h5>
+                <div class="mb-3">
+                    <label for="{{ registration_form.notes.id_for_label }}" class="form-label">
+                        {{ registration_form.notes.label }}
+                    </label>
+                    {{ registration_form.notes }}
+                    {% if registration_form.notes.errors %}
+                        <div class="text-danger small">{{ registration_form.notes.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Fee Summary -->
+            {% if fee_info %}
+                <div class="alert alert-warning">
+                    <h6><i class="bi bi-currency-dollar"></i> Registration Fees</h6>
+                    <ul class="mb-0">
+                        {% for fee in event.registration_fees.all %}
+                            <li><strong>{{ fee.member_type.name }}:</strong> ${{ fee.fee_amount }}</li>
+                        {% endfor %}
+                    </ul>
+                    <p class="mb-0 mt-2"><em>Fees will be calculated based on selected members and their member types.</em></p>
+                </div>
+            {% endif %}
+            
+            <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
+                <a href="{% url 'calendar:event_detail' event.pk %}" class="btn btn-outline-secondary">Cancel</a>
+                <button type="submit" class="btn btn-success">
+                    <i class="bi bi-check-circle"></i> Complete Registration
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Show/hide guest forms based on DELETE checkbox
+    document.querySelectorAll('#guest-formset .guest-form-row').forEach(function(row) {
+        const deleteCheckbox = row.querySelector('input[type="checkbox"][name*="DELETE"]');
+        if (deleteCheckbox) {
+            deleteCheckbox.addEventListener('change', function() {
+                if (this.checked) {
+                    row.style.opacity = '0.5';
+                } else {
+                    row.style.opacity = '1';
+                }
+            });
+        }
+    });
+});
+</script>
+{% endblock %}
+

@@ -7,10 +7,10 @@ from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import get_user_model
-from .models import Event, EventCategory, EventActionLog, EventRegistration
-from .forms import EventForm, EventContactFormSet
+from django.shortcuts import render, redirect, get_object_or_404
+from .models import Event, EventCategory, EventActionLog, EventRegistration, EventRegistrationFee
+from .forms import EventForm, EventContactFormSet, EventRegistrationFeeFormSet, EventRegistrationForm, EventGuestFormSet
 from ManagementApp.mixins import EventEditRequiredMixin, EventDeleteRequiredMixin
-from django.shortcuts import redirect, get_object_or_404
 
 ClubUser = get_user_model()
 
@@ -54,7 +54,17 @@ class EventDetailView(DetailView):
         user = self.request.user
         
         # Check if user can register and if they're already registered
-        context['can_register'] = event.can_register(user)
+        can_register = event.can_register(user) if user.is_authenticated else False
+        
+        # Also check if user's member types are allowed
+        if can_register and user.is_authenticated:
+            user_member_types = user.member_types.filter(is_active=True)
+            if event.allowed_member_types.exists():
+                allowed_types = event.allowed_member_types.filter(is_active=True)
+                if not any(mt in allowed_types for mt in user_member_types):
+                    can_register = False
+        
+        context['can_register'] = can_register
         context['is_registered'] = event.is_registered(user) if user.is_authenticated else False
         context['registration_count'] = event.get_registration_count()
         
@@ -83,18 +93,23 @@ class EventCreateView(LoginRequiredMixin, CreateView):
         context = super().get_context_data(**kwargs)
         if self.request.POST:
             context['contact_formset'] = EventContactFormSet(self.request.POST)
+            context['fee_formset'] = EventRegistrationFeeFormSet(self.request.POST)
         else:
             context['contact_formset'] = EventContactFormSet()
+            context['fee_formset'] = EventRegistrationFeeFormSet()
         return context
 
     def form_valid(self, form):
         context = self.get_context_data()
         contact_formset = context['contact_formset']
+        fee_formset = context['fee_formset']
         
-        if contact_formset.is_valid():
+        if contact_formset.is_valid() and fee_formset.is_valid():
             self.object = form.save()
             contact_formset.instance = self.object
             contact_formset.save()
+            fee_formset.instance = self.object
+            fee_formset.save()
             
             # Log the action
             EventActionLog.objects.create(
@@ -133,17 +148,21 @@ class EventUpdateView(EventEditRequiredMixin, UpdateView):
         context = super().get_context_data(**kwargs)
         if self.request.POST:
             context['contact_formset'] = EventContactFormSet(self.request.POST, instance=self.object)
+            context['fee_formset'] = EventRegistrationFeeFormSet(self.request.POST, instance=self.object)
         else:
             context['contact_formset'] = EventContactFormSet(instance=self.object)
+            context['fee_formset'] = EventRegistrationFeeFormSet(instance=self.object)
         return context
 
     def form_valid(self, form):
         context = self.get_context_data()
         contact_formset = context['contact_formset']
+        fee_formset = context['fee_formset']
         
-        if contact_formset.is_valid():
+        if contact_formset.is_valid() and fee_formset.is_valid():
             form.save()
             contact_formset.save()
+            fee_formset.save()
             
             # Log the action
             EventActionLog.objects.create(
@@ -288,9 +307,11 @@ def member_autocomplete(request):
 
 
 @login_required
-@require_http_methods(["POST"])
 def event_register(request, pk):
-    """Register a user for an event"""
+    """Register a user (and optionally dependents/guests) for an event"""
+    from django.utils import timezone
+    from decimal import Decimal
+    
     event = get_object_or_404(Event, pk=pk)
     user = request.user
     
@@ -304,14 +325,130 @@ def event_register(request, pk):
         messages.info(request, 'You are already registered for this event.')
         return redirect('calendar:event_detail', pk=pk)
     
-    # Create registration
-    EventRegistration.objects.create(
-        event=event,
-        member=user
-    )
+    # Check if user's member types are allowed
+    user_member_types = user.member_types.filter(is_active=True)
+    if event.allowed_member_types.exists():
+        allowed_types = event.allowed_member_types.filter(is_active=True)
+        if not any(mt in allowed_types for mt in user_member_types):
+            messages.error(request, 'Your member type(s) are not allowed to register for this event.')
+            return redirect('calendar:event_detail', pk=pk)
     
-    messages.success(request, f'You have successfully registered for "{event.title}"!')
-    return redirect('calendar:event_detail', pk=pk)
+    if request.method == 'POST':
+        registration_form = EventRegistrationForm(request.POST, event=event, user=user)
+        guest_formset = EventGuestFormSet(request.POST, prefix='guests')
+        
+        # Debug: Check form validation
+        if not registration_form.is_valid():
+            messages.error(request, 'Please correct the registration errors below.')
+            for field, errors in registration_form.errors.items():
+                for error in errors:
+                    messages.error(request, f'Registration {field}: {error}')
+        
+        if not guest_formset.is_valid():
+            messages.error(request, 'Please correct guest information errors.')
+            # Show formset-level errors
+            if guest_formset.non_form_errors():
+                for error in guest_formset.non_form_errors():
+                    messages.error(request, f'Guest formset error: {error}')
+            # Show individual form errors
+            for i, form in enumerate(guest_formset):
+                # Check for non-field errors first (from clean() method)
+                if form.non_field_errors():
+                    for error in form.non_field_errors():
+                        messages.error(request, f'Guest form {i+1}: {error}')
+                # Check for field errors
+                if form.errors:
+                    for field, errors in form.errors.items():
+                        for error in errors:
+                            messages.error(request, f'Guest form {i+1}, {field}: {error}')
+        
+        if registration_form.is_valid() and guest_formset.is_valid():
+            # Calculate total fee
+            total_fee = Decimal('0.00')
+            
+            # Fee for primary member
+            primary_member_types = user.member_types.filter(is_active=True)
+            for member_type in primary_member_types:
+                try:
+                    fee = event.registration_fees.get(member_type=member_type)
+                    total_fee += fee.fee_amount
+                    break  # Use first matching fee
+                except EventRegistrationFee.DoesNotExist:
+                    pass
+            
+            # Fees for additional members
+            additional_members = registration_form.cleaned_data.get('additional_members', [])
+            for member in additional_members:
+                member_types = member.member_types.filter(is_active=True)
+                for member_type in member_types:
+                    try:
+                        fee = event.registration_fees.get(member_type=member_type)
+                        total_fee += fee.fee_amount
+                        break  # Use first matching fee
+                    except EventRegistrationFee.DoesNotExist:
+                        pass
+            
+            # Create registration
+            registration = registration_form.save(commit=False)
+            registration.event = event
+            registration.member = user
+            registration.total_fee = total_fee
+            registration.save()
+            registration_form.save_m2m()  # Save additional_members many-to-many
+            
+            # Save guests
+            for guest_form in guest_formset:
+                if guest_form.cleaned_data and not guest_form.cleaned_data.get('DELETE', False):
+                    # Only save if guest has a name (required field)
+                    guest_name = guest_form.cleaned_data.get('name', '').strip()
+                    if guest_name:
+                        guest = guest_form.save(commit=False)
+                        guest.event = event
+                        guest.registration = registration
+                        guest.save()
+            
+            messages.success(request, f'You have successfully registered for "{event.title}"!')
+            if total_fee > 0:
+                messages.info(request, f'Total registration fee: ${total_fee:.2f}')
+            return redirect('calendar:event_detail', pk=pk)
+    else:
+        registration_form = EventRegistrationForm(event=event, user=user)
+        guest_formset = EventGuestFormSet(prefix='guests')
+    
+    # Get fee information for display
+    fee_info = {}
+    if event.registration_fees.exists():
+        for fee in event.registration_fees.all():
+            fee_info[str(fee.member_type.pk)] = str(fee.fee_amount)
+    
+    # Check if guests are allowed (if there's a "Guest" member type in allowed_member_types)
+    guests_allowed = False
+    if event.allowed_member_types.exists():
+        guest_types = event.allowed_member_types.filter(
+            is_active=True,
+            name__icontains='guest'
+        )
+        guests_allowed = guest_types.exists()
+    else:
+        # If no restrictions on member types, allow guests
+        guests_allowed = True
+    
+    # Get available child members for display in template
+    available_child_members = []
+    if user.is_authenticated:
+        child_members_queryset = registration_form.fields['additional_members'].queryset
+        available_child_members = list(child_members_queryset)
+    
+    context = {
+        'event': event,
+        'registration_form': registration_form,
+        'guest_formset': guest_formset,
+        'fee_info': fee_info,
+        'guests_allowed': guests_allowed,
+        'available_child_members': available_child_members,
+    }
+    
+    return render(request, 'CalendarApp/event_register.html', context)
 
 
 @login_required

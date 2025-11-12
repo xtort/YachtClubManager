@@ -146,6 +146,111 @@
                                 {% endif %}
                             </div>
                         </div>
+                        
+                        <div class="row">
+                            <div class="col-md-12 mb-3">
+                                <label class="form-label">
+                                    {{ form.allowed_member_types.label }}
+                                </label>
+                                {% if form.allowed_member_types.help_text %}
+                                    <small class="form-text text-muted d-block mb-2">{{ form.allowed_member_types.help_text }}</small>
+                                {% endif %}
+                                <div class="border rounded p-3" style="max-height: 200px; overflow-y: auto;">
+                                    {% for checkbox in form.allowed_member_types %}
+                                        <div class="form-check">
+                                            {{ checkbox.tag }}
+                                            <label class="form-check-label" for="{{ checkbox.id_for_label }}">
+                                                {{ checkbox.choice_label }}
+                                            </label>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                                {% if form.allowed_member_types.errors %}
+                                    <div class="text-danger small mt-2">{{ form.allowed_member_types.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr>
+                    
+                    <!-- Registration Fees Section -->
+                    <div class="mb-4">
+                        <h5 class="mb-3">
+                            <i class="bi bi-currency-dollar"></i> Registration Fees
+                        </h5>
+                        <p class="text-muted small">Set registration fees for different member types. Leave empty for free events.</p>
+                        
+                        {{ fee_formset.management_form }}
+                        
+                        <div id="fee-formset">
+                            {% if fee_formset.forms %}
+                                {% for fee_form in fee_formset %}
+                                    <div class="card mb-3 fee-form-row" data-form-index="{{ forloop.counter0 }}" data-member-type-id="{% if fee_form.member_type.value %}{{ fee_form.member_type.value }}{% endif %}">
+                                        <div class="card-body">
+                                            {% if fee_form.non_field_errors %}
+                                                <div class="alert alert-danger">
+                                                    {{ fee_form.non_field_errors }}
+                                                </div>
+                                            {% endif %}
+                                            
+                                            {{ fee_form.id }}
+                                            {% if fee_form.DELETE %}
+                                                <div class="form-check mb-2">
+                                                    {{ fee_form.DELETE }}
+                                                    <label class="form-check-label" for="{{ fee_form.DELETE.id_for_label }}">
+                                                        Delete this fee
+                                                    </label>
+                                                </div>
+                                            {% endif %}
+                                            
+                                            <div class="row">
+                                                <div class="col-md-6 mb-3">
+                                                    <label class="form-label">
+                                                        Member Type
+                                                    </label>
+                                                    {{ fee_form.member_type }}
+                                                    <div class="form-control-plaintext border rounded p-2 bg-light" id="member-type-display-{{ forloop.counter0 }}">
+                                                        {% if fee_form.instance and fee_form.instance.pk and fee_form.instance.member_type %}
+                                                            {{ fee_form.instance.member_type.name }}
+                                                        {% elif fee_form.member_type.value %}
+                                                            <span class="text-muted">Loading...</span>
+                                                        {% else %}
+                                                            <span class="text-muted">Select member type above</span>
+                                                        {% endif %}
+                                                    </div>
+                                                    {% if fee_form.member_type.errors %}
+                                                        <div class="text-danger small">{{ fee_form.member_type.errors }}</div>
+                                                    {% endif %}
+                                                </div>
+                                                <div class="col-md-6 mb-3">
+                                                    <label for="{{ fee_form.fee_amount.id_for_label }}" class="form-label">
+                                                        {{ fee_form.fee_amount.label }}
+                                                    </label>
+                                                    <div class="input-group">
+                                                        <span class="input-group-text">$</span>
+                                                        {{ fee_form.fee_amount }}
+                                                    </div>
+                                                    {% if fee_form.fee_amount.errors %}
+                                                        <div class="text-danger small">{{ fee_form.fee_amount.errors }}</div>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            {% else %}
+                                <div id="fee-formset-placeholder" class="alert alert-info">
+                                    <i class="bi bi-info-circle"></i> Select Member Types above to set registration fees.
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        {% if fee_formset.non_form_errors %}
+                            <div class="alert alert-danger">
+                                {{ fee_formset.non_form_errors }}
+                            </div>
+                        {% endif %}
                     </div>
 
                     <hr>
@@ -239,6 +344,7 @@
 {% block extra_js %}
 {{ form.media.js }}
 <script>
+// Member autocomplete functionality
 (function() {
     const autocompleteUrl = "{% url 'calendar:member_autocomplete' %}";
     let autocompleteTimeout = null;
@@ -310,6 +416,307 @@
             }
         });
     });
+})();
+
+// Registration Fees Auto-Update Logic - separate IIFE to ensure it runs
+(function() {
+    // Wait for DOM to be fully ready
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initFeeAutoUpdate);
+    } else {
+        initFeeAutoUpdate();
+    }
+    
+    function initFeeAutoUpdate() {
+        const feeFormsetContainer = document.getElementById('fee-formset');
+        if (!feeFormsetContainer) {
+            console.error('Fee formset container not found');
+            return;
+        }
+        
+        // Find the TOTAL_FORMS input - it could be anywhere near the formset container
+        // Django formsets use names like "registration_fees-TOTAL_FORMS"
+        let totalFormsInput = document.querySelector('input[name="registration_fees-TOTAL_FORMS"]');
+        
+        // If not found, try looking in parent elements
+        if (!totalFormsInput) {
+            let parent = feeFormsetContainer.parentElement;
+            while (parent && !totalFormsInput) {
+                totalFormsInput = parent.querySelector('input[name="registration_fees-TOTAL_FORMS"]');
+                parent = parent.parentElement;
+            }
+        }
+        
+        // If still not found, try previous sibling approach
+        if (!totalFormsInput) {
+            let feeManagementForm = feeFormsetContainer.previousElementSibling;
+            while (feeManagementForm && !totalFormsInput) {
+                totalFormsInput = feeManagementForm.querySelector('input[name="registration_fees-TOTAL_FORMS"]');
+                feeManagementForm = feeManagementForm.previousElementSibling;
+            }
+        }
+        
+        if (!totalFormsInput) {
+            console.error('TOTAL_FORMS input not found. Looking for:', 'input[name="registration_fees-TOTAL_FORMS"]');
+            // Try to find any TOTAL_FORMS input as fallback
+            totalFormsInput = document.querySelector('input[name*="TOTAL_FORMS"]');
+            if (totalFormsInput) {
+                console.warn('Found TOTAL_FORMS input but may not be correct one:', totalFormsInput.name);
+            } else {
+                console.error('No TOTAL_FORMS input found anywhere');
+                return;
+            }
+        }
+        
+        let formIndex = parseInt(totalFormsInput.value) || 0;
+        
+        // Count existing fee forms to ensure we start from the right index
+        const existingFeeForms = feeFormsetContainer.querySelectorAll('.fee-form-row');
+        const existingCount = existingFeeForms.length;
+        console.log('Existing fee forms count:', existingCount);
+        console.log('TOTAL_FORMS value:', totalFormsInput.value);
+        
+        // Start formIndex from the existing count to avoid conflicts
+        if (existingCount > formIndex) {
+            formIndex = existingCount;
+            console.log('Adjusted formIndex to match existing forms:', formIndex);
+        }
+        
+        console.log('Starting formIndex:', formIndex);
+        
+        // Build member type data from checkboxes
+        const memberTypeData = {};
+        // First, find all checkboxes for allowed_member_types
+        let checkboxes = document.querySelectorAll('input[type="checkbox"][name^="allowed_member_types"]');
+        
+        // Add data attributes and class to checkboxes
+        checkboxes.forEach(function(checkbox) {
+            const memberTypeId = checkbox.value;
+            if (memberTypeId) {
+                // Add data attribute and class
+                checkbox.setAttribute('data-member-type-id', memberTypeId);
+                checkbox.classList.add('allowed-member-type-checkbox');
+                
+                // Get label text
+                const label = checkbox.closest('.form-check')?.querySelector('label');
+                const memberTypeName = label ? label.textContent.trim() : '';
+                memberTypeData[memberTypeId] = memberTypeName;
+            }
+        });
+        
+        // Re-select with the class to ensure we have the right checkboxes
+        checkboxes = document.querySelectorAll('input.allowed-member-type-checkbox[data-member-type-id]');
+        
+        if (checkboxes.length === 0) {
+            console.warn('No checkboxes with data-member-type-id found after setup');
+            return;
+        }
+        
+        console.log('Member type data:', memberTypeData);
+        console.log('Initial formIndex:', formIndex);
+        console.log('Found checkboxes:', checkboxes.length);
+        
+        // Debug: Log all checkbox details
+        checkboxes.forEach(function(checkbox, index) {
+            console.log(`Checkbox ${index}:`, {
+                id: checkbox.id,
+                value: checkbox.value,
+                checked: checkbox.checked,
+                memberTypeId: checkbox.getAttribute('data-member-type-id')
+            });
+        });
+        
+        // Function to find fee form row by member type ID
+        function findFeeFormByMemberType(memberTypeId) {
+            return feeFormsetContainer.querySelector(`.fee-form-row[data-member-type-id="${memberTypeId}"]`);
+        }
+        
+        // Function to create a new fee form row
+        function createFeeFormRow(memberTypeId, memberTypeName) {
+            console.log('createFeeFormRow called with:', memberTypeId, memberTypeName);
+            console.log('Current formIndex before increment:', formIndex);
+            
+            const formIndexStr = formIndex.toString();
+            formIndex++;
+            
+            console.log('Using formIndex:', formIndexStr, 'next formIndex will be:', formIndex);
+            
+            const newRow = document.createElement('div');
+            newRow.className = 'card mb-3 fee-form-row';
+            newRow.setAttribute('data-form-index', formIndexStr);
+            newRow.setAttribute('data-member-type-id', memberTypeId);
+            newRow.innerHTML = `
+                <div class="card-body">
+                    <input type="hidden" name="registration_fees-${formIndexStr}-id" id="id_registration_fees-${formIndexStr}-id">
+                    <div class="form-check mb-2">
+                        <input type="checkbox" name="registration_fees-${formIndexStr}-DELETE" id="id_registration_fees-${formIndexStr}-DELETE" class="form-check-input">
+                        <label class="form-check-label" for="id_registration_fees-${formIndexStr}-DELETE">
+                            Delete this fee
+                        </label>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">
+                                Member Type
+                            </label>
+                            <input type="hidden" name="registration_fees-${formIndexStr}-member_type" id="id_registration_fees-${formIndexStr}-member_type" value="${memberTypeId}">
+                            <div class="form-control-plaintext border rounded p-2 bg-light">
+                                ${memberTypeName}
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="id_registration_fees-${formIndexStr}-fee_amount" class="form-label">
+                                Fee Amount ($)
+                            </label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <input type="number" name="registration_fees-${formIndexStr}-fee_amount" id="id_registration_fees-${formIndexStr}-fee_amount" class="form-control" step="0.01" min="0" value="0.00">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            console.log('Created newRow element:', newRow);
+            console.log('NewRow innerHTML length:', newRow.innerHTML.length);
+            
+            return newRow;
+        }
+        
+        // Function to update formset count
+        function updateFormsetCount() {
+            totalFormsInput.value = formIndex;
+            console.log('Updated formset count to:', formIndex);
+        }
+        
+        // Listen for changes on allowed_member_types checkboxes
+        console.log('Attaching event listeners to', checkboxes.length, 'checkboxes');
+        checkboxes.forEach(function(checkbox, index) {
+            console.log(`Attaching listener to checkbox ${index}:`, checkbox.id);
+            
+            checkbox.addEventListener('change', function(e) {
+                // Get memberTypeId from data attribute or value as fallback
+                let memberTypeId = this.getAttribute('data-member-type-id');
+                if (!memberTypeId || memberTypeId === '') {
+                    memberTypeId = this.value;
+                    // Set the data attribute for future use
+                    this.setAttribute('data-member-type-id', memberTypeId);
+                }
+                const isChecked = this.checked;
+                
+                console.log('Checkbox changed:', memberTypeId, 'checked:', isChecked, 'checkbox value:', this.value, 'data-attr:', this.getAttribute('data-member-type-id'));
+                
+                if (!memberTypeId) {
+                    console.error('Cannot proceed - memberTypeId is empty. Checkbox value:', this.value, 'data-attr:', this.getAttribute('data-member-type-id'));
+                    return;
+                }
+                
+                if (isChecked) {
+                    // Check if fee form already exists for this member type
+                    const existingRow = findFeeFormByMemberType(memberTypeId);
+                    console.log('Existing row for member type', memberTypeId, ':', existingRow);
+                    
+                    if (!existingRow) {
+                        // Remove placeholder if it exists
+                        const placeholder = document.getElementById('fee-formset-placeholder');
+                        if (placeholder) {
+                            placeholder.remove();
+                        }
+                        
+                        // Create new fee form row
+                        console.log('Creating new fee form row for member type:', memberTypeId);
+                        const memberTypeName = memberTypeData[memberTypeId] || ('Member Type ' + memberTypeId);
+                        const newRow = createFeeFormRow(memberTypeId, memberTypeName);
+                        console.log('Created row element:', newRow);
+                        
+                        if (newRow && feeFormsetContainer) {
+                            feeFormsetContainer.appendChild(newRow);
+                            console.log('Appended row to container. Container now has', feeFormsetContainer.children.length, 'children');
+                            
+                            // Scroll to the new form to make it visible
+                            newRow.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                            
+                            // Highlight the new form briefly
+                            newRow.style.border = '2px solid #28a745';
+                            setTimeout(function() {
+                                newRow.style.border = '';
+                            }, 2000);
+                            
+                            updateFormsetCount();
+                            console.log('Created new fee form for member type:', memberTypeId);
+                        } else {
+                            console.error('Cannot append row - newRow:', newRow, 'feeFormsetContainer:', feeFormsetContainer);
+                        }
+                    } else {
+                        // Unmark for deletion if it was marked
+                        const deleteCheckbox = existingRow.querySelector('input[name$="-DELETE"]');
+                        if (deleteCheckbox && deleteCheckbox.checked) {
+                            deleteCheckbox.checked = false;
+                            existingRow.style.opacity = '1';
+                            console.log('Unmarked fee form for deletion:', memberTypeId);
+                        } else {
+                            console.log('Fee form already exists and is not marked for deletion');
+                        }
+                    }
+                } else {
+                    // Find and mark for deletion or hide the fee form row
+                    const existingRow = findFeeFormByMemberType(memberTypeId);
+                    if (existingRow) {
+                        const deleteCheckbox = existingRow.querySelector('input[name$="-DELETE"]');
+                        if (deleteCheckbox) {
+                            deleteCheckbox.checked = true;
+                            existingRow.style.opacity = '0.5';
+                            console.log('Marked fee form for deletion:', memberTypeId);
+                        } else {
+                            // If no DELETE checkbox (new form), just remove it
+                            existingRow.remove();
+                            updateFormsetCount();
+                            console.log('Removed fee form:', memberTypeId);
+                        }
+                        
+                        // Check if we need to show placeholder (all forms are marked for deletion or removed)
+                        const visibleForms = feeFormsetContainer.querySelectorAll('.fee-form-row:not([style*="opacity: 0.5"])');
+                        if (visibleForms.length === 0 && !document.getElementById('fee-formset-placeholder')) {
+                            const placeholder = document.createElement('div');
+                            placeholder.id = 'fee-formset-placeholder';
+                            placeholder.className = 'alert alert-info';
+                            placeholder.innerHTML = '<i class="bi bi-info-circle"></i> Select Member Types above to set registration fees.';
+                            feeFormsetContainer.appendChild(placeholder);
+                        }
+                    }
+                }
+            });
+        });
+        
+        // Initialize: sync existing fee forms with checked member types
+        // Remove placeholder if there are existing fee forms
+        const existingFeeFormsOnLoad = feeFormsetContainer.querySelectorAll('.fee-form-row');
+        if (existingFeeFormsOnLoad.length > 0) {
+            const placeholder = document.getElementById('fee-formset-placeholder');
+            if (placeholder) {
+                placeholder.remove();
+            }
+        }
+        
+        checkboxes.forEach(function(checkbox) {
+            if (checkbox.checked) {
+                const memberTypeId = checkbox.getAttribute('data-member-type-id') || checkbox.value;
+                if (memberTypeId) {
+                    const existingRow = findFeeFormByMemberType(memberTypeId);
+                    if (!existingRow) {
+                        // Create fee form for pre-checked member types
+                        const memberTypeName = memberTypeData[memberTypeId] || ('Member Type ' + memberTypeId);
+                        const newRow = createFeeFormRow(memberTypeId, memberTypeName);
+                        feeFormsetContainer.appendChild(newRow);
+                        updateFormsetCount();
+                        console.log('Initialized fee form for pre-checked member type:', memberTypeId);
+                    }
+                }
+            }
+        });
+        
+        console.log('Registration Fees Auto-Update initialized');
+    }
 })();
 </script>
 <style>

@@ -2,6 +2,7 @@ from django.db import models
 from django.urls import reverse
 from django.contrib.auth import get_user_model
 from django_ckeditor_5.fields import CKEditor5Field
+from ManagementApp.models import MemberType
 
 ClubUser = get_user_model()
 
@@ -65,6 +66,13 @@ class Event(models.Model):
         choices=REGISTRANT_LIST_VISIBILITY_CHOICES,
         default='none',
         help_text='Who can view the list of registrants for this event'
+    )
+    # Member types allowed to register for this event
+    allowed_member_types = models.ManyToManyField(
+        MemberType,
+        related_name='events',
+        blank=True,
+        help_text='Member types that can register for this event. Leave empty to allow all types.'
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -135,10 +143,85 @@ class Event(models.Model):
     def get_registration_count(self):
         """Get the count of active registrations"""
         return self.registrations.filter(cancelled=False).count()
+    
+    def get_allowed_member_types(self):
+        """Get member types allowed to register for this event"""
+        if self.allowed_member_types.exists():
+            return self.allowed_member_types.filter(is_active=True)
+        # If no restrictions, return all active member types
+        return MemberType.objects.filter(is_active=True)
+    
+    def can_member_type_register(self, member_type):
+        """Check if a member type can register for this event"""
+        if not self.allowed_member_types.exists():
+            return True  # No restrictions, all types allowed
+        return self.allowed_member_types.filter(pk=member_type.pk, is_active=True).exists()
+
+
+class EventRegistrationFee(models.Model):
+    """Fee for a specific member type for an event"""
+    event = models.ForeignKey(
+        Event,
+        on_delete=models.CASCADE,
+        related_name='registration_fees',
+        help_text='Event this fee applies to'
+    )
+    member_type = models.ForeignKey(
+        MemberType,
+        on_delete=models.CASCADE,
+        related_name='event_fees',
+        help_text='Member type this fee applies to'
+    )
+    fee_amount = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0.00,
+        help_text='Registration fee amount'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        unique_together = [['event', 'member_type']]
+        ordering = ['member_type__display_order', 'member_type__name']
+        verbose_name = 'Event Registration Fee'
+        verbose_name_plural = 'Event Registration Fees'
+    
+    def __str__(self):
+        return f"{self.event.title} - {self.member_type.name}: ${self.fee_amount}"
+
+
+class EventGuest(models.Model):
+    """Non-member guest registered for an event"""
+    event = models.ForeignKey(
+        Event,
+        on_delete=models.CASCADE,
+        related_name='guests',
+        help_text='Event the guest is registered for'
+    )
+    registration = models.ForeignKey(
+        'EventRegistration',
+        on_delete=models.CASCADE,
+        related_name='guests',
+        help_text='Registration this guest is associated with'
+    )
+    name = models.CharField(max_length=200, help_text='Guest full name')
+    email = models.EmailField(blank=True, help_text='Guest email address')
+    phone_number = models.CharField(max_length=20, blank=True, help_text='Guest phone number')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['name']
+        verbose_name = 'Event Guest'
+        verbose_name_plural = 'Event Guests'
+    
+    def __str__(self):
+        return f"{self.name} - {self.event.title}"
 
 
 class EventRegistration(models.Model):
-    """Registration of a member for an event"""
+    """Registration of a member (and optionally their dependents) for an event"""
     event = models.ForeignKey(
         Event,
         on_delete=models.CASCADE,
@@ -149,12 +232,25 @@ class EventRegistration(models.Model):
         ClubUser,
         on_delete=models.CASCADE,
         related_name='event_registrations',
-        help_text='Member registering for the event'
+        help_text='Primary member registering for the event'
+    )
+    # Additional members from the primary member's dependents
+    additional_members = models.ManyToManyField(
+        ClubUser,
+        related_name='additional_registrations',
+        blank=True,
+        help_text='Additional members (dependents) included in this registration'
     )
     registered_at = models.DateTimeField(auto_now_add=True, help_text='When the member registered')
     cancelled = models.BooleanField(default=False, help_text='Whether the registration was cancelled')
     cancelled_at = models.DateTimeField(null=True, blank=True, help_text='When the registration was cancelled')
     notes = models.TextField(blank=True, help_text='Additional notes about the registration')
+    total_fee = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0.00,
+        help_text='Total registration fee paid'
+    )
     updated_at = models.DateTimeField(auto_now=True)
     
     class Meta:
@@ -171,6 +267,16 @@ class EventRegistration(models.Model):
     def __str__(self):
         status = "Cancelled" if self.cancelled else "Registered"
         return f"{self.member.get_full_name()} - {self.event.title} ({status})"
+    
+    def get_all_registrants(self):
+        """Get all members registered (primary + additional)"""
+        registrants = [self.member]
+        registrants.extend(self.additional_members.all())
+        return registrants
+    
+    def get_total_registrants_count(self):
+        """Get total count of registrants including primary member and additional members"""
+        return 1 + self.additional_members.count()
     
     def cancel(self):
         """Cancel this registration"""
