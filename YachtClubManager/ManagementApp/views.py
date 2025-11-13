@@ -9,10 +9,12 @@ from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 from django.contrib.auth.decorators import login_required
 import json
-from CalendarApp.models import EventCategory, Event
+from CalendarApp.models import EventCategory, Event, EventRegistration, EventRegistrationFee
 from .models import Role, MemberType, MemberTypeRelationship
-from .forms import EventCategoryForm, ClubUserCreateForm, ClubUserUpdateForm, ProfileUpdateForm, MemberTypeForm, RoleForm, MemberTypeRelationshipForm
+from .forms import EventCategoryForm, ClubUserCreateForm, ClubUserUpdateForm, ProfileUpdateForm, MemberTypeForm, RoleForm, MemberTypeRelationshipForm, EventRegistrationFilterForm
 from .mixins import UserManagementRequiredMixin, MemberDirectoryRequiredMixin
+from django.db.models import Q
+from decimal import Decimal
 
 ClubUser = get_user_model()
 
@@ -592,3 +594,140 @@ def member_type_reorder(request):
         return JsonResponse({'success': False, 'error': 'Invalid JSON'}, status=400)
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@login_required
+def registrations_report(request):
+    """Generate a registrations report with filtering options"""
+    # Check permissions - only Admins and Editors can access
+    if not (request.user.has_permission('edit_events') or request.user.has_permission('manage_users') or request.user.is_superuser):
+        raise PermissionDenied("You don't have permission to access this report.")
+    
+    filter_form = EventRegistrationFilterForm(request.GET)
+    registrations_data = []
+    total_revenue = Decimal('0.00')
+    
+    if filter_form.is_valid():
+        # Start with all non-cancelled registrations
+        registrations = EventRegistration.objects.filter(cancelled=False).select_related(
+            'event', 'member'
+        ).prefetch_related('member__member_types', 'additional_members')
+        
+        # Filter by event title
+        event_title = filter_form.cleaned_data.get('event_title')
+        if event_title:
+            registrations = registrations.filter(event__title__icontains=event_title)
+        
+        # Filter by start date (events starting on or after this date)
+        start_date = filter_form.cleaned_data.get('start_date')
+        if start_date:
+            registrations = registrations.filter(event__start_datetime__date__gte=start_date)
+        
+        # Filter by end date (events ending on or before this date)
+        end_date = filter_form.cleaned_data.get('end_date')
+        if end_date:
+            registrations = registrations.filter(event__end_datetime__date__lte=end_date)
+        
+        # Build report data
+        for registration in registrations:
+            # Primary member
+            member = registration.member
+            member_types = ', '.join([mt.name for mt in member.member_types.filter(is_active=True)])
+            
+            # Calculate fee for primary member based on their member type
+            primary_fee = Decimal('0.00')
+            member_type_list = member.member_types.filter(is_active=True)
+            for member_type in member_type_list:
+                try:
+                    fee = EventRegistrationFee.objects.get(event=registration.event, member_type=member_type)
+                    primary_fee = fee.fee_amount
+                    break  # Use first matching fee
+                except EventRegistrationFee.DoesNotExist:
+                    pass
+            
+            # Format address
+            address_parts = []
+            if member.address1:
+                address_parts.append(member.address1)
+            if member.address2:
+                address_parts.append(member.address2)
+            if member.city:
+                address_parts.append(member.city)
+            if member.state:
+                address_parts.append(member.get_state_display())
+            if member.zip_code:
+                address_parts.append(member.zip_code)
+            full_address = ', '.join(address_parts) if address_parts else 'N/A'
+            
+            registrations_data.append({
+                'event_title': registration.event.title,
+                'event_start': registration.event.start_datetime,
+                'event_end': registration.event.end_datetime,
+                'full_name': member.get_full_name(),
+                'address': full_address,
+                'email': member.email,
+                'phone': member.primary_phone_number or 'N/A',
+                'member_type': member_types or 'N/A',
+                'registration_date': registration.registered_at,
+                'registration_fee': primary_fee,
+                'is_primary': True,
+            })
+            
+            total_revenue += primary_fee
+            
+            # Additional members (dependents)
+            for additional_member in registration.additional_members.all():
+                additional_member_types = ', '.join([mt.name for mt in additional_member.member_types.filter(is_active=True)])
+                
+                # Calculate fee for additional member based on their member type
+                additional_fee = Decimal('0.00')
+                additional_member_type_list = additional_member.member_types.filter(is_active=True)
+                for member_type in additional_member_type_list:
+                    try:
+                        fee = EventRegistrationFee.objects.get(event=registration.event, member_type=member_type)
+                        additional_fee = fee.fee_amount
+                        break  # Use first matching fee
+                    except EventRegistrationFee.DoesNotExist:
+                        pass
+                
+                # Format address for additional member
+                additional_address_parts = []
+                if additional_member.address1:
+                    additional_address_parts.append(additional_member.address1)
+                if additional_member.address2:
+                    additional_address_parts.append(additional_member.address2)
+                if additional_member.city:
+                    additional_address_parts.append(additional_member.city)
+                if additional_member.state:
+                    additional_address_parts.append(additional_member.get_state_display())
+                if additional_member.zip_code:
+                    additional_address_parts.append(additional_member.zip_code)
+                additional_full_address = ', '.join(additional_address_parts) if additional_address_parts else 'N/A'
+                
+                registrations_data.append({
+                    'event_title': registration.event.title,
+                    'event_start': registration.event.start_datetime,
+                    'event_end': registration.event.end_datetime,
+                    'full_name': additional_member.get_full_name(),
+                    'address': additional_full_address,
+                    'email': additional_member.email,
+                    'phone': additional_member.primary_phone_number or 'N/A',
+                    'member_type': additional_member_types or 'N/A',
+                    'registration_date': registration.registered_at,
+                    'registration_fee': additional_fee,
+                    'is_primary': False,
+                })
+                
+                total_revenue += additional_fee
+        
+        # Sort by event start date, then by registration date
+        registrations_data.sort(key=lambda x: (x['event_start'], x['registration_date']))
+    
+    context = {
+        'filter_form': filter_form,
+        'registrations_data': registrations_data,
+        'total_revenue': total_revenue,
+        'has_results': len(registrations_data) > 0,
+    }
+    
+    return render(request, 'ManagementApp/registrations_report.html', context)

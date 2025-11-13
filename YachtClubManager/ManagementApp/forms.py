@@ -730,3 +730,33 @@ class ProfileUpdateForm(forms.ModelForm):
             user.save()
         return user
 
+
+class EventRegistrationFilterForm(forms.Form):
+    """Form for filtering event registrations in reports"""
+    event_title = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Search by event title...'
+        }),
+        label='Event Title'
+    )
+    start_date = forms.DateField(
+        required=False,
+        widget=forms.DateInput(attrs={
+            'class': 'form-control',
+            'type': 'date'
+        }),
+        label='Start Date',
+        help_text='Show events starting on or after this date'
+    )
+    end_date = forms.DateField(
+        required=False,
+        widget=forms.DateInput(attrs={
+            'class': 'form-control',
+            'type': 'date'
+        }),
+        label='End Date',
+        help_text='Show events ending on or before this date'
+    )
+

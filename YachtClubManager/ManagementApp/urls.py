@@ -36,5 +36,7 @@ urlpatterns = [
     path('members/', views.MembersDirectoryView.as_view(), name='members_directory'),
     # Profile management (for all authenticated users)
     path('profile/', views.ProfileUpdateView.as_view(), name='profile'),
+    # Reports
+    path('reports/registrations/', views.registrations_report, name='registrations_report'),
 ]
 

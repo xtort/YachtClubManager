@@ -1,4 +1,5 @@
 {% extends 'ManagementApp/base_management.html' %}
+{% load event_permissions %}
 
 {% block management_content %}
 <div class="card section-card">
@@ -6,15 +7,41 @@
         <h4 class="mb-0"><i class="bi bi-bar-chart"></i> Reporting & Analytics</h4>
     </div>
     <div class="section-body">
-        <div class="alert alert-info">
-            <i class="bi bi-info-circle"></i> <strong>Coming Soon:</strong> Reporting and analytics features will be available here.
-            <ul class="mt-2 mb-0">
-                <li>Event attendance reports</li>
-                <li>User activity analytics</li>
-                <li>Event category statistics</li>
-                <li>Custom report generation</li>
-                <li>Export capabilities (PDF, Excel, CSV)</li>
-            </ul>
+        <div class="row">
+            <div class="col-md-6 mb-4">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <h5 class="card-title">
+                            <i class="bi bi-clipboard-data text-primary"></i> Event Registrations Report
+                        </h5>
+                        <p class="card-text">
+                            Generate detailed reports of event registrations with member information, 
+                            registration dates, and fee collection totals.
+                        </p>
+                        <a href="{% url 'management:registrations_report' %}" class="btn btn-primary">
+                            <i class="bi bi-arrow-right-circle"></i> View Report
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 mb-4">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <h5 class="card-title">
+                            <i class="bi bi-calendar-check text-info"></i> Coming Soon
+                        </h5>
+                        <p class="card-text">
+                            Additional reporting features will be available here:
+                        </p>
+                        <ul class="mb-0">
+                            <li>User activity analytics</li>
+                            <li>Event category statistics</li>
+                            <li>Custom report generation</li>
+                            <li>Export capabilities (PDF, Excel, CSV)</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </div>

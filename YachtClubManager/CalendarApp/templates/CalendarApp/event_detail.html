@@ -171,6 +171,9 @@
         <a href="{% url 'calendar:calendar' %}" class="btn btn-outline-secondary">
             <i class="bi bi-calendar3"></i> View Calendar
         </a>
+        <a href='{% url 'management:registrations_report' %}?event_title={{ event.title }}' class="btn btn-outline-secondary">
+            <i class="bi bi-clipboard-data"></i> View Registration Report
+        </a>
     </div>
 </div>
 {% endblock %}

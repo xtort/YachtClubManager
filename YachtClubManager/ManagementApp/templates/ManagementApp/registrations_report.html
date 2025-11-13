@@ -1,0 +1,138 @@
+{% extends 'ManagementApp/base_management.html' %}
+{% load static %}
+
+{% block management_content %}
+<div class="card section-card">
+    <div class="section-header" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
+        <h4 class="mb-0"><i class="bi bi-clipboard-data"></i> Event Registrations Report</h4>
+    </div>
+    <div class="section-body">
+        <!-- Filter Form -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-funnel"></i> Filter Options</h5>
+            </div>
+            <div class="card-body">
+                <form method="get" action="{% url 'management:registrations_report' %}">
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="{{ filter_form.event_title.id_for_label }}" class="form-label">
+                                {{ filter_form.event_title.label }}
+                            </label>
+                            {{ filter_form.event_title }}
+                            {% if filter_form.event_title.errors %}
+                                <div class="text-danger small">{{ filter_form.event_title.errors }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="{{ filter_form.start_date.id_for_label }}" class="form-label">
+                                {{ filter_form.start_date.label }}
+                            </label>
+                            {{ filter_form.start_date }}
+                            {% if filter_form.start_date.help_text %}
+                                <small class="form-text text-muted">{{ filter_form.start_date.help_text }}</small>
+                            {% endif %}
+                            {% if filter_form.start_date.errors %}
+                                <div class="text-danger small">{{ filter_form.start_date.errors }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="{{ filter_form.end_date.id_for_label }}" class="form-label">
+                                {{ filter_form.end_date.label }}
+                            </label>
+                            {{ filter_form.end_date }}
+                            {% if filter_form.end_date.help_text %}
+                                <small class="form-text text-muted">{{ filter_form.end_date.help_text }}</small>
+                            {% endif %}
+                            {% if filter_form.end_date.errors %}
+                                <div class="text-danger small">{{ filter_form.end_date.errors }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-search"></i> Search
+                        </button>
+                        <a href="{% url 'management:registrations_report' %}" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-counterclockwise"></i> Clear
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Results -->
+        {% if has_results %}
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="bi bi-list-ul"></i> Registration Details</h5>
+                    <span class="badge bg-info">{{ registrations_data|length }} registration(s)</span>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover mb-0">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>Event Title</th>
+                                    <th>Event Date</th>
+                                    <th>Full Name</th>
+                                    <th>Address</th>
+                                    <th>Email</th>
+                                    <th>Phone</th>
+                                    <th>Member Type</th>
+                                    <th>Registration Date</th>
+                                    <th class="text-end">Registration Fee</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for reg in registrations_data %}
+                                    <tr>
+                                        <td>
+                                            <strong>{{ reg.event_title }}</strong>
+                                            {% if not reg.is_primary %}
+                                                <br><small class="text-muted">(Additional Member)</small>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {{ reg.event_start|date:"M d, Y" }}<br>
+                                            <small class="text-muted">{{ reg.event_start|date:"g:i A" }} - {{ reg.event_end|date:"g:i A" }}</small>
+                                        </td>
+                                        <td>{{ reg.full_name }}</td>
+                                        <td>{{ reg.address }}</td>
+                                        <td><a href="mailto:{{ reg.email }}">{{ reg.email }}</a></td>
+                                        <td>{{ reg.phone }}</td>
+                                        <td>
+                                            {% if reg.member_type != 'N/A' %}
+                                                <span class="badge bg-secondary">{{ reg.member_type }}</span>
+                                            {% else %}
+                                                <span class="text-muted">N/A</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ reg.registration_date|date:"M d, Y g:i A" }}</td>
+                                        <td class="text-end">${{ reg.registration_fee|floatformat:2 }}</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                            <tfoot class="table-secondary">
+                                <tr>
+                                    <td colspan="8" class="text-end"><strong>Total Revenue from Fees:</strong></td>
+                                    <td class="text-end"><strong>${{ total_revenue|floatformat:2 }}</strong></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        {% elif filter_form.is_bound %}
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle"></i> No registrations found matching your search criteria.
+            </div>
+        {% else %}
+            <div class="alert alert-secondary">
+                <i class="bi bi-info-circle"></i> Use the filter options above to search for event registrations.
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
