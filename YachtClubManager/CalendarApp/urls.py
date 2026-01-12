@@ -15,5 +15,7 @@ urlpatterns = [
     path('events/json/', views.calendar_json, name='calendar_json'),
     path('events/action-log/', views.EventActionLogView.as_view(), name='event_action_log'),
     path('members/autocomplete/', views.member_autocomplete, name='member_autocomplete'),
+    path('documents/<int:pk>/info/', views.document_info, name='document_info'),
+    path('documents/browser/', views.document_browser, name='document_browser'),
 ]
 

@@ -26,6 +26,7 @@ class EventCategory(models.Model):
 class Event(models.Model):
     """Calendar event/activity for the Yacht Club"""
     
+    """Registration status choices"""
     REGISTRATION_STATUS_CHOICES = [
         ('not_required', 'Not Required'),
         ('recommended', 'Recommended'),
@@ -37,12 +38,14 @@ class Event(models.Model):
         ('external', 'External'),
     ]
     
+    """Registrant list visibility choices"""
     REGISTRANT_LIST_VISIBILITY_CHOICES = [
         ('none', 'None'),
         ('viewer_public', 'Viewer/Public'),
         ('members', 'Members'),
         ('registered_members_only', 'Registered Members Only'),
     ]
+    
     
     title = models.CharField(max_length=200)
     short_description = models.TextField(max_length=500, help_text='Brief description of the event')
@@ -73,6 +76,13 @@ class Event(models.Model):
         related_name='events',
         blank=True,
         help_text='Member types that can register for this event. Leave empty to allow all types.'
+    )
+    # Documents linked to this event
+    linked_documents = models.ManyToManyField(
+        'DocumentManagement.DocumentFile',
+        related_name='events',
+        blank=True,
+        help_text='Documents from Document Management that are linked to this event'
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

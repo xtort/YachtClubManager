@@ -1,3 +1,4 @@
+from django.utils import timezone
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -67,6 +68,7 @@ class EventDetailView(DetailView):
         context['can_register'] = can_register
         context['is_registered'] = event.is_registered(user) if user.is_authenticated else False
         context['registration_count'] = event.get_registration_count()
+        context['registration_current'] = event.start_datetime < timezone.now()
         
         return context
 
@@ -88,6 +90,11 @@ class EventCreateView(LoginRequiredMixin, CreateView):
             raise PermissionDenied("You don't have permission to create events.")
         
         return super().dispatch(request, *args, **kwargs)
+    
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['user'] = self.request.user
+        return kwargs
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -143,6 +150,11 @@ class EventUpdateView(EventEditRequiredMixin, UpdateView):
     template_name = 'CalendarApp/event_form.html'
     context_object_name = 'event'
     success_url = reverse_lazy('calendar:calendar')
+    
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['user'] = self.request.user
+        return kwargs
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -307,9 +319,146 @@ def member_autocomplete(request):
 
 
 @login_required
+@require_http_methods(["GET"])
+def document_info(request, pk):
+    """API endpoint to get document information for inserting into CKEditor"""
+    try:
+        from DocumentManagement.models import DocumentFile
+        from DocumentManagement.utils import check_folder_permission
+    except ImportError:
+        return JsonResponse({'error': 'Document Management not available'}, status=404)
+    
+    try:
+        document = DocumentFile.objects.select_related('folder').get(pk=pk)
+        
+        # Check if user can view this document
+        if not check_folder_permission(request.user, document.folder, 'view'):
+            return JsonResponse({'error': 'Permission denied'}, status=403)
+        
+        # Get download URL
+        from django.urls import reverse
+        download_url = request.build_absolute_uri(reverse('document_management:file_download', kwargs={'pk': document.pk}))
+        
+        return JsonResponse({
+            'id': document.id,
+            'name': document.name,
+            'folder': document.folder.get_full_path(),
+            'download_url': download_url,
+            'file_size': document.get_file_size_display(),
+        })
+    except DocumentFile.DoesNotExist:
+        return JsonResponse({'error': 'Document not found'}, status=404)
+
+
+@login_required
+@require_http_methods(["GET"])
+def document_browser(request):
+    """API endpoint for document browser - returns folders and files"""
+    try:
+        from DocumentManagement.models import DocumentFolder, DocumentFile
+        from DocumentManagement.utils import get_accessible_folders, check_folder_permission
+    except ImportError:
+        return JsonResponse({'error': 'Document Management not available'}, status=404)
+    
+    # Get folder ID from query parameter (default to root folders)
+    folder_id = request.GET.get('folder_id')
+    search_query = request.GET.get('search', '').strip()
+    
+    response_data = {
+        'folders': [],
+        'files': [],
+        'current_folder': None,
+        'breadcrumbs': []
+    }
+    
+    # If searching, return search results
+    if search_query:
+        accessible_folders = get_accessible_folders(request.user, permission_type='view')
+        folder_ids = list(accessible_folders.values_list('id', flat=True))
+        
+        # Search files in accessible folders
+        files = DocumentFile.objects.filter(
+            folder_id__in=folder_ids,
+            name__icontains=search_query
+        ).select_related('folder').order_by('name')[:100]  # Limit to 100 results
+        
+        for file_obj in files:
+            response_data['files'].append({
+                'id': file_obj.id,
+                'name': file_obj.name,
+                'folder_path': file_obj.folder.get_full_path(),
+                'file_size': file_obj.get_file_size_display(),
+            })
+        
+        return JsonResponse(response_data)
+    
+    # Get current folder (or root folders if no folder_id)
+    if folder_id:
+        try:
+            current_folder = DocumentFolder.objects.get(pk=folder_id)
+            # Check permission
+            if not check_folder_permission(request.user, current_folder, 'view'):
+                return JsonResponse({'error': 'Permission denied'}, status=403)
+            
+            response_data['current_folder'] = {
+                'id': current_folder.id,
+                'name': current_folder.name,
+                'path': current_folder.get_full_path(),
+            }
+            
+            # Get breadcrumbs
+            ancestors = current_folder.get_all_ancestors()
+            response_data['breadcrumbs'] = [
+                {'id': f.id, 'name': f.name, 'path': f.get_full_path()}
+                for f in ancestors
+            ]
+            response_data['breadcrumbs'].append({
+                'id': current_folder.id,
+                'name': current_folder.name,
+                'path': current_folder.get_full_path(),
+            })
+            
+            # Get subfolders user can view
+            subfolders = current_folder.subfolders.all()
+            for subfolder in subfolders:
+                if check_folder_permission(request.user, subfolder, 'view'):
+                    response_data['folders'].append({
+                        'id': subfolder.id,
+                        'name': subfolder.name,
+                        'path': subfolder.get_full_path(),
+                    })
+            
+            # Get files in current folder
+            files = current_folder.files.all().order_by('name')
+            for file_obj in files:
+                response_data['files'].append({
+                    'id': file_obj.id,
+                    'name': file_obj.name,
+                    'folder_path': current_folder.get_full_path(),
+                    'file_size': file_obj.get_file_size_display(),
+                })
+        except DocumentFolder.DoesNotExist:
+            return JsonResponse({'error': 'Folder not found'}, status=404)
+    else:
+        # Root folders
+        accessible_folders = get_accessible_folders(request.user, permission_type='view')
+        root_folders = accessible_folders.filter(parent=None).order_by('name')
+        
+        for folder in root_folders:
+            response_data['folders'].append({
+                'id': folder.id,
+                'name': folder.name,
+                'path': folder.get_full_path(),
+            })
+        
+        response_data['breadcrumbs'] = [{'id': None, 'name': 'Root', 'path': ''}]
+    
+    return JsonResponse(response_data)
+
+
+@login_required
 def event_register(request, pk):
     """Register a user (and optionally dependents/guests) for an event"""
-    from django.utils import timezone
     from decimal import Decimal
     
     event = get_object_or_404(Event, pk=pk)
@@ -318,6 +467,11 @@ def event_register(request, pk):
     # Check if user can register
     if not event.can_register(user):
         messages.error(request, 'You cannot register for this event.')
+        return redirect('calendar:event_detail', pk=pk)
+
+    # Check if the event occurs in the past and if so block registration
+    if event.start_datetime < timezone.now():
+        messages.error(request, 'You cannot register for this event because it has already occurred.')
         return redirect('calendar:event_detail', pk=pk)
     
     # Check if already registered

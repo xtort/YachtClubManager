@@ -59,6 +59,27 @@
                     </div>
                 </div>
             {% endif %}
+            
+            {% if event.linked_documents.exists %}
+                <div class="mb-3">
+                    <h5><i class="bi bi-file-earmark"></i> Linked Documents</h5>
+                    <div class="list-group">
+                        {% for document in event.linked_documents.all %}
+                            <a href="{% url 'document_management:file_download' document.pk %}" class="list-group-item list-group-item-action" target="_blank">
+                                <div class="d-flex w-100 justify-content-between">
+                                    <h6 class="mb-1">
+                                        <i class="bi bi-file-earmark-pdf"></i> {{ document.name }}
+                                    </h6>
+                                    <small>{{ document.get_file_size_display }}</small>
+                                </div>
+                                <p class="mb-1 text-muted small">
+                                    <i class="bi bi-folder"></i> {{ document.folder.get_full_path }}
+                                </p>
+                            </a>
+                        {% endfor %}
+                    </div>
+                </div>
+            {% endif %}
 
             <hr>
 
@@ -95,6 +116,10 @@
                             </button>
                             <small class="text-muted d-block mt-1">You are registered for this event.</small>
                         </form>
+                    {% elif registration_current %}
+                        <div class="alert alert-danger">
+                            <i class="bi bi-exclamation-triangle"></i> You cannot register for this event because it occurrs in the past.
+                        </div>
                     {% else %}
                         <a href="{% url 'calendar:event_register' event.pk %}" class="btn btn-success mt-3">
                             <i class="bi bi-check-circle"></i> Register for Event

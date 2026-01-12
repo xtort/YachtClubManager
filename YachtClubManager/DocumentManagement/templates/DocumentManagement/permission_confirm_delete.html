@@ -1,0 +1,37 @@
+{% extends 'ManagementApp/base_management.html' %}
+
+{% block management_content %}
+<div class="card section-card">
+    <div class="section-header" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+        <h4 class="mb-0"><i class="bi bi-exclamation-triangle"></i> Delete Permission</h4>
+    </div>
+    <div class="section-body">
+        <div class="alert alert-warning">
+            <i class="bi bi-exclamation-triangle"></i> <strong>Warning:</strong> This will remove all permissions for this role on the folder.
+        </div>
+        
+        <p>Are you sure you want to delete the permission for role <strong>"{{ object.role.get_name_display }}"</strong> on folder <strong>"{{ object.folder.name }}"</strong>?</p>
+        
+        <div class="alert alert-info">
+            <strong>Current Permissions:</strong><br>
+            View: {% if object.can_view %}Yes{% else %}No{% endif %}<br>
+            Add: {% if object.can_add %}Yes{% else %}No{% endif %}<br>
+            Edit: {% if object.can_edit %}Yes{% else %}No{% endif %}<br>
+            Delete: {% if object.can_delete %}Yes{% else %}No{% endif %}
+        </div>
+        
+        <form method="post">
+            {% csrf_token %}
+            <div class="d-flex justify-content-between">
+                <a href="{% url 'document_management:folder_detail' object.folder.pk %}" class="btn btn-secondary">
+                    <i class="bi bi-x-circle"></i> Cancel
+                </a>
+                <button type="submit" class="btn btn-danger">
+                    <i class="bi bi-trash"></i> Yes, Delete Permission
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+

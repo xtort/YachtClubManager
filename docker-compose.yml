@@ -29,7 +29,8 @@ services:
       - ./YachtClubManager:/app
       - ./docker-entrypoint.sh:/app/docker-entrypoint.sh:ro
       - static_volume:/app/staticfiles
-      - media_volume:/app/media
+      # Media files are stored in ./YachtClubManager/media (via the ./YachtClubManager:/app mount above)
+      # Removed media_volume mount to use local filesystem instead
     ports:
       - "${DJANGO_PORT:-8000}:8000"
     env_file:
@@ -49,5 +50,5 @@ services:
 volumes:
   postgres_data:
   static_volume:
-  media_volume:
+  # media_volume removed - using local filesystem for media files instead
 

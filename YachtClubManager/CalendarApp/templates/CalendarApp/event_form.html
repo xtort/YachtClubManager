@@ -96,6 +96,33 @@
                             <div class="text-danger small">{{ form.formatted_description.errors }}</div>
                         {% endif %}
                     </div>
+                    
+                    {% if form.linked_documents %}
+                    <!-- Document Management Integration -->
+                    <div class="mb-3">
+                        <label class="form-label">
+                            <i class="bi bi-file-earmark"></i> Linked Documents
+                        </label>
+                        {% if form.linked_documents.help_text %}
+                            <small class="form-text text-muted d-block mb-2">{{ form.linked_documents.help_text }}</small>
+                        {% endif %}
+                        <div class="d-flex gap-2 align-items-start">
+                            <button type="button" class="btn btn-outline-primary" id="browse-documents-btn">
+                                <i class="bi bi-folder"></i> Browse Documents
+                            </button>
+                            <div id="selected-documents-display" class="flex-grow-1">
+                                <small class="text-muted">No documents selected</small>
+                            </div>
+                        </div>
+                        <!-- Hidden field to store selected document IDs -->
+                        <div style="display: none;">
+                            {{ form.linked_documents }}
+                        </div>
+                        {% if form.linked_documents.errors %}
+                            <div class="text-danger small mt-2">{{ form.linked_documents.errors }}</div>
+                        {% endif %}
+                    </div>
+                    {% endif %}
 
                     <hr>
 
@@ -343,6 +370,11 @@
 
 {% block extra_js %}
 {{ form.media.js }}
+
+{% if form.linked_documents %}
+{% include 'CalendarApp/document_browser_modal.html' %}
+{% endif %}
+
 <script>
 // Member autocomplete functionality
 (function() {
@@ -717,6 +749,359 @@
         
         console.log('Registration Fees Auto-Update initialized');
     }
+    
+    // Document Browser Modal Functionality
+    const browseDocumentsBtn = document.getElementById('browse-documents-btn');
+    const documentBrowserModal = document.getElementById('documentBrowserModal');
+    const linkedDocumentsSelect = document.getElementById('id_linked_documents');
+    const selectedDocumentsDisplay = document.getElementById('selected-documents-display');
+    
+    // Debug logging
+    console.log('Document Browser Setup:', {
+        browseDocumentsBtn: !!browseDocumentsBtn,
+        documentBrowserModal: !!documentBrowserModal,
+        linkedDocumentsSelect: !!linkedDocumentsSelect,
+        selectedDocumentsDisplay: !!selectedDocumentsDisplay,
+        bootstrapAvailable: typeof bootstrap !== 'undefined'
+    });
+    
+    if (browseDocumentsBtn && documentBrowserModal) {
+        let currentFolderId = null;
+        let selectedDocumentIds = new Set();
+        let searchTimeout = null;
+        
+        // Update selected documents display (define before use)
+        function updateSelectedDocumentsDisplay() {
+            if (selectedDocumentsDisplay) {
+                if (selectedDocumentIds.size > 0) {
+                    selectedDocumentsDisplay.innerHTML = '<small class="text-success"><i class="bi bi-check-circle"></i> ' + selectedDocumentIds.size + ' document(s) selected</small>';
+                } else {
+                    selectedDocumentsDisplay.innerHTML = '<small class="text-muted">No documents selected</small>';
+                }
+            }
+        }
+        
+        // Update insert button state (define before use)
+        function updateInsertButton() {
+            const insertBtn = document.getElementById('insertSelectedDocumentsBtn');
+            const countSpan = document.getElementById('selectedCount');
+            if (insertBtn) {
+                insertBtn.disabled = selectedDocumentIds.size === 0;
+            }
+            if (countSpan) {
+                countSpan.textContent = selectedDocumentIds.size;
+            }
+            const countBadge = document.getElementById('selectedFilesCount');
+            if (countBadge) {
+                countBadge.textContent = selectedDocumentIds.size + ' selected';
+            }
+        }
+        
+        // Initialize selected documents from form field
+        if (linkedDocumentsSelect) {
+            Array.from(linkedDocumentsSelect.options).forEach(function(option) {
+                if (option.selected && option.value) {
+                    selectedDocumentIds.add(option.value);
+                }
+            });
+            updateSelectedDocumentsDisplay();
+            updateInsertButton();
+        }
+        
+        // Open modal when button is clicked
+        browseDocumentsBtn.addEventListener('click', function() {
+            // Check if Bootstrap is available
+            if (typeof bootstrap === 'undefined') {
+                console.error('Bootstrap is not loaded. Please ensure Bootstrap 5 is included.');
+                alert('Error: Bootstrap is not loaded. Please refresh the page.');
+                return;
+            }
+            
+            try {
+                const modal = new bootstrap.Modal(documentBrowserModal);
+                modal.show();
+                loadDocuments();
+            } catch (error) {
+                console.error('Error opening modal:', error);
+                alert('Error opening document browser. Please check the browser console for details.');
+            }
+        });
+        
+        // Search functionality
+        const searchInput = document.getElementById('documentSearchInput');
+        const clearSearchBtn = document.getElementById('clearSearchBtn');
+        
+        if (searchInput) {
+            searchInput.addEventListener('input', function() {
+                clearTimeout(searchTimeout);
+                const query = this.value.trim();
+                
+                if (query.length > 0) {
+                    clearSearchBtn.style.display = 'block';
+                    searchTimeout = setTimeout(function() {
+                        loadDocuments(query);
+                    }, 300); // Debounce search
+                } else {
+                    clearSearchBtn.style.display = 'none';
+                    currentFolderId = null;
+                    loadDocuments();
+                }
+            });
+        }
+        
+        if (clearSearchBtn) {
+            clearSearchBtn.addEventListener('click', function() {
+                searchInput.value = '';
+                this.style.display = 'none';
+                currentFolderId = null;
+                loadDocuments();
+            });
+        }
+        
+        // Load documents function
+        function loadDocuments(searchQuery) {
+            const loadingEl = document.getElementById('documentBrowserLoading');
+            const errorEl = document.getElementById('documentBrowserError');
+            const contentEl = document.getElementById('documentBrowserContent');
+            const foldersList = document.getElementById('documentFoldersList');
+            const filesList = document.getElementById('documentFilesList');
+            const breadcrumbsEl = document.getElementById('documentBreadcrumbs');
+            
+            loadingEl.style.display = 'block';
+            errorEl.style.display = 'none';
+            contentEl.style.display = 'none';
+            
+            let url = '{% url "calendar:document_browser" %}';
+            const params = new URLSearchParams();
+            if (searchQuery) {
+                params.append('search', searchQuery);
+            } else if (currentFolderId) {
+                params.append('folder_id', currentFolderId);
+            }
+            if (params.toString()) {
+                url += '?' + params.toString();
+            }
+            
+            fetch(url)
+                .then(response => response.json())
+                .then(function(data) {
+                    loadingEl.style.display = 'none';
+                    
+                    if (data.error) {
+                        errorEl.textContent = data.error;
+                        errorEl.style.display = 'block';
+                        return;
+                    }
+                    
+                    contentEl.style.display = 'block';
+                    
+                    // Update breadcrumbs
+                    if (data.breadcrumbs) {
+                        breadcrumbsEl.innerHTML = '';
+                        data.breadcrumbs.forEach(function(breadcrumb, index) {
+                            const li = document.createElement('li');
+                            li.className = 'breadcrumb-item' + (index === data.breadcrumbs.length - 1 ? ' active' : '');
+                            if (index < data.breadcrumbs.length - 1) {
+                                const a = document.createElement('a');
+                                a.href = '#';
+                                a.textContent = breadcrumb.name;
+                                a.setAttribute('data-folder-id', breadcrumb.id || '');
+                                a.addEventListener('click', function(e) {
+                                    e.preventDefault();
+                                    currentFolderId = breadcrumb.id || null;
+                                    searchInput.value = '';
+                                    clearSearchBtn.style.display = 'none';
+                                    loadDocuments();
+                                });
+                                li.appendChild(a);
+                            } else {
+                                li.textContent = breadcrumb.name;
+                            }
+                            breadcrumbsEl.appendChild(li);
+                        });
+                    }
+                    
+                    // Render folders
+                    foldersList.innerHTML = '';
+                    if (data.folders && data.folders.length > 0) {
+                        data.folders.forEach(function(folder) {
+                            const item = document.createElement('a');
+                            item.href = '#';
+                            item.className = 'list-group-item list-group-item-action';
+                            item.innerHTML = '<i class="bi bi-folder"></i> ' + folder.name;
+                            item.addEventListener('click', function(e) {
+                                e.preventDefault();
+                                currentFolderId = folder.id;
+                                searchInput.value = '';
+                                clearSearchBtn.style.display = 'none';
+                                loadDocuments();
+                            });
+                            foldersList.appendChild(item);
+                        });
+                    } else if (!searchQuery) {
+                        foldersList.innerHTML = '<div class="list-group-item text-muted">No folders</div>';
+                    }
+                    
+                    // Render files
+                    filesList.innerHTML = '';
+                    if (data.files && data.files.length > 0) {
+                        data.files.forEach(function(file) {
+                            const item = document.createElement('div');
+                            item.className = 'list-group-item';
+                            const isSelected = selectedDocumentIds.has(file.id.toString());
+                            item.innerHTML = `
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" value="${file.id}" id="file-${file.id}" ${isSelected ? 'checked' : ''}>
+                                    <label class="form-check-label w-100" for="file-${file.id}">
+                                        <i class="bi bi-file-earmark"></i> <strong>${file.name}</strong>
+                                        <br><small class="text-muted">${file.folder_path} • ${file.file_size}</small>
+                                    </label>
+                                </div>
+                            `;
+                            const checkbox = item.querySelector('input[type="checkbox"]');
+                            checkbox.addEventListener('change', function() {
+                                if (this.checked) {
+                                    selectedDocumentIds.add(file.id.toString());
+                                } else {
+                                    selectedDocumentIds.delete(file.id.toString());
+                                }
+                                updateSelectedDocuments();
+                            });
+                            filesList.appendChild(item);
+                        });
+                    } else {
+                        filesList.innerHTML = '<div class="list-group-item text-muted">No files</div>';
+                    }
+                })
+                .catch(function(error) {
+                    loadingEl.style.display = 'none';
+                    errorEl.textContent = 'Error loading documents: ' + error.message;
+                    errorEl.style.display = 'block';
+                });
+        }
+        
+        // Update selected documents in form field
+        function updateSelectedDocuments() {
+            if (linkedDocumentsSelect) {
+                // Clear existing selections
+                Array.from(linkedDocumentsSelect.options).forEach(function(option) {
+                    option.selected = false;
+                });
+                
+                // Set selected documents
+                selectedDocumentIds.forEach(function(docId) {
+                    const option = linkedDocumentsSelect.querySelector('option[value="' + docId + '"]');
+                    if (option) {
+                        option.selected = true;
+                    } else {
+                        // Create option if it doesn't exist
+                        const newOption = document.createElement('option');
+                        newOption.value = docId;
+                        newOption.textContent = 'Document ' + docId;
+                        newOption.selected = true;
+                        linkedDocumentsSelect.appendChild(newOption);
+                    }
+                });
+            }
+            
+            updateSelectedDocumentsDisplay();
+            updateInsertButton();
+        }
+        
+        // Insert selected documents into CKEditor
+        const insertSelectedBtn = document.getElementById('insertSelectedDocumentsBtn');
+        if (insertSelectedBtn) {
+            insertSelectedBtn.addEventListener('click', function() {
+                if (selectedDocumentIds.size === 0) {
+                    alert('Please select at least one document.');
+                    return;
+                }
+                
+                // Try multiple ways to find the CKEditor textarea element
+                let editorElement = document.getElementById('id_formatted_description');
+                if (!editorElement) {
+                    editorElement = document.querySelector('textarea[name="formatted_description"]');
+                }
+                if (!editorElement) {
+                    editorElement = document.querySelector('[data-django-ckeditor5]');
+                }
+                if (!editorElement) {
+                    editorElement = document.querySelector('textarea[data-django-ckeditor5]');
+                }
+                
+                if (!editorElement) {
+                    alert('Editor not found. Please wait for the page to fully load.');
+                    return;
+                }
+                
+                // Fetch document info for all selected documents
+                const promises = Array.from(selectedDocumentIds).map(function(docId) {
+                    return fetch(`{% url 'calendar:document_info' 0 %}`.replace('0', docId))
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.error) {
+                                throw new Error(data.error);
+                            }
+                            return data;
+                        });
+                });
+                
+                Promise.all(promises).then(function(documents) {
+                    // Build HTML links for all documents
+                    const linksHtml = documents.map(function(doc) {
+                        return `<a href="${doc.download_url}" target="_blank">${doc.name}</a>`;
+                    }).join(' ');
+                    
+                    // Try to get current content from CKEditor5 API first
+                    let currentContent = '';
+                    let ckEditorInstance = null;
+                    
+                    if (window.django && window.django.ckeditor5 && window.django.ckeditor5.editors) {
+                        const editorId = editorElement.getAttribute('id');
+                        ckEditorInstance = window.django.ckeditor5.editors[editorId];
+                        if (ckEditorInstance && typeof ckEditorInstance.getData === 'function') {
+                            currentContent = ckEditorInstance.getData() || '';
+                        }
+                    }
+                    
+                    if (!currentContent && editorElement.value) {
+                        currentContent = editorElement.value;
+                    }
+                    
+                    // Insert links
+                    const separator = currentContent && !currentContent.endsWith(' ') && !currentContent.endsWith('\n') ? ' ' : '';
+                    const newContent = currentContent + separator + linksHtml;
+                    
+                    // Update CKEditor5 if available
+                    if (ckEditorInstance && typeof ckEditorInstance.setData === 'function') {
+                        ckEditorInstance.setData(newContent);
+                    } else {
+                        editorElement.value = newContent;
+                        editorElement.dispatchEvent(new Event('input', { bubbles: true }));
+                        editorElement.dispatchEvent(new Event('change', { bubbles: true }));
+                    }
+                    
+                    // Close modal
+                    const modal = bootstrap.Modal.getInstance(documentBrowserModal);
+                    if (modal) {
+                        modal.hide();
+                    }
+                    
+                    // Show success message
+                    const message = documents.length === 1 
+                        ? `Document link "${documents[0].name}" inserted successfully!`
+                        : `${documents.length} document links inserted successfully!`;
+                    alert(message);
+                }).catch(function(error) {
+                    console.error('Error fetching document info:', error);
+                    alert('Error: ' + (error.message || 'Failed to fetch document information.'));
+                });
+            });
+        }
+        
+        // Initialize button state
+        updateInsertButton();
+    }
 })();
 </script>
 <style>
@@ -740,5 +1125,6 @@
     position: relative;
 }
 </style>
+
 {% endblock %}
 

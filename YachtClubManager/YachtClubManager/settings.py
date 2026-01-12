@@ -19,16 +19,24 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Load environment variables from .env file
 load_dotenv(BASE_DIR / '.env')
+# Also try loading .env.docker for Docker environments
+load_dotenv(BASE_DIR.parent.parent / '.env.docker', override=False)
 
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
+# Environment: 'development' or 'production'
+# Determines whether to use HTTP (dev) or HTTPS (production)
+ENVIRONMENT = os.getenv('ENVIRONMENT', 'development').lower()
+
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-jqy9)fz)vwf40q!9ry(^8t0np%0tm_w4r!@ptq!pis9lwv331c')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.getenv('DEBUG', 'False').lower() == 'false'
+# Fixed: DEBUG should be True when env var is 'True', False otherwise
+DEBUG_ENV = os.getenv('DEBUG', 'True' if ENVIRONMENT == 'development' else 'False')
+DEBUG = DEBUG_ENV.lower() in ('true', '1', 'yes', 'on')
 
 # Add CSRF Trusted Origins
 CSRF_TRUSTED_ORIGINS = [
@@ -37,11 +45,22 @@ CSRF_TRUSTED_ORIGINS = [
     'https://44.231.230.60',
 ]
 
+# Add HTTP origins for development
+if ENVIRONMENT == 'development':
+    CSRF_TRUSTED_ORIGINS.extend([
+        'http://localhost:8000',
+        'http://127.0.0.1:8000',
+        'http://localhost',
+        'http://127.0.0.1',
+    ])
+
 #ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '34.219.105.90', 'localhost,127.0.0.1').split(',') if os.getenv('ALLOWED_HOSTS') else []
 ALLOWED_HOSTS = ['localhost', '127.0.0.1', '44.231.230.60', 'regulustug.com', 'www.regulustug.com']
 
-# Security settings - only enable HTTPS in production (when DEBUG=False)
-if not DEBUG:
+# Security settings - use HTTPS in production, HTTP in development
+IS_PRODUCTION = ENVIRONMENT == 'production'
+
+if IS_PRODUCTION:
     # Behind Nginx proxy on HTTPS (production only):
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
     SECURE_SSL_REDIRECT = True
@@ -54,6 +73,10 @@ else:
     SECURE_SSL_REDIRECT = False
     SESSION_COOKIE_SECURE = False
     CSRF_COOKIE_SECURE = False
+    # Disable HSTS in development (prevents browser from forcing HTTPS)
+    SECURE_HSTS_SECONDS = 0
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = False
+    SECURE_HSTS_PRELOAD = False
     # Don't set SECURE_PROXY_SSL_HEADER in development
 
 # Application definition
@@ -68,6 +91,7 @@ INSTALLED_APPS = [
     'django_ckeditor_5',
     'CalendarApp',
     'ManagementApp',
+    'DocumentManagement',
 ]
 
 MIDDLEWARE = [
