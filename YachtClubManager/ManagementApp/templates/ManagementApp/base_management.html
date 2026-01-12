@@ -134,8 +134,8 @@
                 
                 <div class="nav-section">
                     <div class="nav-section-title">Documents</div>
-                    <a class="nav-link {% if request.resolver_match.url_name == 'dashboard_section' and request.GET.section == 'documents' %}active{% endif %}" href="{% url 'management:dashboard_section' %}?section=documents">
-                        <i class="bi bi-folder"></i> Documents
+                    <a class="nav-link {% if 'document_management' in request.resolver_match.app_names %}active{% endif %}" href="{% url 'document_management:dashboard' %}">
+                        <i class="bi bi-folder"></i> Document Management
                     </a>
                 </div>
                 

@@ -1,0 +1,162 @@
+{% extends 'ManagementApp/base_management.html' %}
+
+{% block management_content %}
+<div class="card section-card">
+    <div class="section-header" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb mb-0" style="background: transparent; color: white;">
+                        <li class="breadcrumb-item"><a href="{% url 'document_management:dashboard' %}" style="color: white;">Home</a></li>
+                        {% for ancestor in breadcrumbs %}
+                            <li class="breadcrumb-item"><a href="{% url 'document_management:folder_detail' ancestor.pk %}" style="color: white;">{{ ancestor.name }}</a></li>
+                        {% endfor %}
+                        <li class="breadcrumb-item active" style="color: white;" aria-current="page">{{ folder.name }}</li>
+                    </ol>
+                </nav>
+            </div>
+            <div>
+                {% if can_add %}
+                    <a href="{% url 'document_management:folder_create' %}?parent={{ folder.pk }}" class="btn btn-light btn-sm">
+                        <i class="bi bi-folder-plus"></i> New Subfolder
+                    </a>
+                    <a href="{% url 'document_management:file_upload' %}?folder={{ folder.pk }}" class="btn btn-light btn-sm">
+                        <i class="bi bi-cloud-upload"></i> Upload File
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="section-body">
+        {% if folder.description %}
+            <div class="alert alert-light">
+                {{ folder.description }}
+            </div>
+        {% endif %}
+        
+        <div class="row mb-3">
+            <div class="col-md-6">
+                {% if can_edit %}
+                    <a href="{% url 'document_management:folder_edit' folder.pk %}" class="btn btn-outline-primary btn-sm">
+                        <i class="bi bi-pencil"></i> Edit Folder
+                    </a>
+                {% endif %}
+                {% if can_delete %}
+                    <a href="{% url 'document_management:folder_delete' folder.pk %}" class="btn btn-outline-danger btn-sm">
+                        <i class="bi bi-trash"></i> Delete Folder
+                    </a>
+                {% endif %}
+                <a href="{% url 'document_management:permission_create' folder.pk %}" class="btn btn-outline-secondary btn-sm">
+                    <i class="bi bi-shield-check"></i> Manage Permissions
+                </a>
+            </div>
+        </div>
+        
+        <h5><i class="bi bi-folder"></i> Subfolders</h5>
+        {% if subfolders %}
+            <div class="list-group mb-4">
+                {% for subfolder in subfolders %}
+                    <a href="{% url 'document_management:folder_detail' subfolder.pk %}" class="list-group-item list-group-item-action">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1"><i class="bi bi-folder-fill text-warning"></i> {{ subfolder.name }}</h6>
+                            <small>{{ subfolder.files.count }} file{{ subfolder.files.count|pluralize }}</small>
+                        </div>
+                        {% if subfolder.description %}
+                            <p class="mb-1 text-muted small">{{ subfolder.description|truncatewords:15 }}</p>
+                        {% endif %}
+                    </a>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p class="text-muted mb-4">No subfolders</p>
+        {% endif %}
+        
+        <h5><i class="bi bi-file-earmark"></i> Files</h5>
+        {% if files %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Size</th>
+                            <th>Uploaded</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for file in files %}
+                            <tr>
+                                <td>
+                                    <i class="bi bi-file-earmark"></i> 
+                                    <a href="{% url 'document_management:file_detail' file.pk %}">{{ file.name }}</a>
+                                </td>
+                                <td>{{ file.get_file_size_display }}</td>
+                                <td>{{ file.created_at|date:"M d, Y" }}</td>
+                                <td>
+                                    <a href="{% url 'document_management:file_download' file.pk %}" class="btn btn-sm btn-outline-primary">
+                                        <i class="bi bi-download"></i> Download
+                                    </a>
+                                    {% if can_edit %}
+                                        <a href="{% url 'document_management:file_edit' file.pk %}" class="btn btn-sm btn-outline-secondary">
+                                            <i class="bi bi-pencil"></i>
+                                        </a>
+                                    {% endif %}
+                                    {% if can_delete %}
+                                        <a href="{% url 'document_management:file_delete' file.pk %}" class="btn btn-sm btn-outline-danger">
+                                            <i class="bi bi-trash"></i>
+                                        </a>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <p class="text-muted">No files in this folder</p>
+        {% endif %}
+        
+        <hr>
+        
+        <h5><i class="bi bi-shield-check"></i> Permissions</h5>
+        {% if permissions %}
+            <div class="table-responsive">
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>Role</th>
+                            <th>View</th>
+                            <th>Add</th>
+                            <th>Edit</th>
+                            <th>Delete</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for perm in permissions %}
+                            <tr>
+                                <td>{{ perm.role.get_name_display }}</td>
+                                <td>{% if perm.can_view %}<i class="bi bi-check-circle text-success"></i>{% else %}<i class="bi bi-x-circle text-danger"></i>{% endif %}</td>
+                                <td>{% if perm.can_add %}<i class="bi bi-check-circle text-success"></i>{% else %}<i class="bi bi-x-circle text-danger"></i>{% endif %}</td>
+                                <td>{% if perm.can_edit %}<i class="bi bi-check-circle text-success"></i>{% else %}<i class="bi bi-x-circle text-danger"></i>{% endif %}</td>
+                                <td>{% if perm.can_delete %}<i class="bi bi-check-circle text-success"></i>{% else %}<i class="bi bi-x-circle text-danger"></i>{% endif %}</td>
+                                <td>
+                                    <a href="{% url 'document_management:permission_edit' perm.pk %}" class="btn btn-sm btn-outline-secondary">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    <a href="{% url 'document_management:permission_delete' perm.pk %}" class="btn btn-sm btn-outline-danger">
+                                        <i class="bi bi-trash"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <p class="text-muted">No permissions set for this folder</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+

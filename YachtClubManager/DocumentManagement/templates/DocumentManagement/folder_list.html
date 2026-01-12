@@ -1,0 +1,41 @@
+{% extends 'ManagementApp/base_management.html' %}
+
+{% block management_content %}
+<div class="card section-card">
+    <div class="section-header" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);">
+        <div class="d-flex justify-content-between align-items-center">
+            <h4 class="mb-0"><i class="bi bi-folder"></i> All Folders</h4>
+            <a href="{% url 'document_management:folder_create' %}" class="btn btn-light btn-sm">
+                <i class="bi bi-plus-circle"></i> New Folder
+            </a>
+        </div>
+    </div>
+    <div class="section-body">
+        {% if folders %}
+            <div class="list-group">
+                {% for folder in folders %}
+                    <a href="{% url 'document_management:folder_detail' folder.pk %}" class="list-group-item list-group-item-action">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1"><i class="bi bi-folder-fill text-warning"></i> {{ folder.name }}</h6>
+                            <div>
+                                <span class="badge bg-secondary">{{ folder.files.count }} file{{ folder.files.count|pluralize }}</span>
+                                <span class="badge bg-info">{{ folder.subfolders.count }} subfolder{{ folder.subfolders.count|pluralize }}</span>
+                            </div>
+                        </div>
+                        {% if folder.description %}
+                            <p class="mb-1 text-muted">{{ folder.description|truncatewords:20 }}</p>
+                        {% endif %}
+                        <small class="text-muted">Created: {{ folder.created_at|date:"M d, Y" }} by {{ folder.created_by.get_full_name|default:folder.created_by.email }}</small>
+                    </a>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle"></i> No folders created yet. 
+                <a href="{% url 'document_management:folder_create' %}">Create your first folder</a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+

@@ -1,0 +1,71 @@
+{% extends 'ManagementApp/base_management.html' %}
+
+{% block management_content %}
+<div class="card section-card">
+    <div class="section-header" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);">
+        <div class="d-flex justify-content-between align-items-center">
+            <h4 class="mb-0"><i class="bi bi-folder"></i> Document Management</h4>
+            <a href="{% url 'document_management:folder_create' %}" class="btn btn-light btn-sm">
+                <i class="bi bi-plus-circle"></i> New Folder
+            </a>
+        </div>
+    </div>
+    <div class="section-body">
+        <div class="row mb-4">
+            <div class="col-md-12">
+                <h5>Root Folders</h5>
+                {% if root_folders %}
+                    <div class="list-group">
+                        {% for folder in root_folders %}
+                            <a href="{% url 'document_management:folder_detail' folder.pk %}" class="list-group-item list-group-item-action">
+                                <div class="d-flex w-100 justify-content-between">
+                                    <h6 class="mb-1"><i class="bi bi-folder-fill text-warning"></i> {{ folder.name }}</h6>
+                                    <small>{{ folder.files.count }} file{{ folder.files.count|pluralize }}</small>
+                                </div>
+                                {% if folder.description %}
+                                    <p class="mb-1 text-muted">{{ folder.description|truncatewords:20 }}</p>
+                                {% endif %}
+                                <small class="text-muted">Created: {{ folder.created_at|date:"M d, Y" }}</small>
+                            </a>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i> No folders created yet. 
+                        <a href="{% url 'document_management:folder_create' %}">Create your first folder</a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-body">
+                        <h6 class="card-title"><i class="bi bi-upload"></i> Quick Actions</h6>
+                        <a href="{% url 'document_management:file_upload' %}" class="btn btn-primary btn-sm mb-2">
+                            <i class="bi bi-cloud-upload"></i> Upload File
+                        </a>
+                        <br>
+                        <a href="{% url 'document_management:folder_list' %}" class="btn btn-outline-secondary btn-sm">
+                            <i class="bi bi-list"></i> View All Folders
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-body">
+                        <h6 class="card-title"><i class="bi bi-shield-check"></i> Permissions</h6>
+                        <p class="card-text small text-muted">
+                            Folder permissions cascade to all subfolders and files. 
+                            Set permissions on folders to control access based on user roles.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

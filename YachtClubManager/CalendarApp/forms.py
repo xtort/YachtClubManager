@@ -7,6 +7,14 @@ from ManagementApp.models import MemberType
 
 ClubUser = get_user_model()
 
+# Import DocumentFile only if DocumentManagement app is available
+try:
+    from DocumentManagement.models import DocumentFile
+    DOCUMENT_MANAGEMENT_AVAILABLE = True
+except ImportError:
+    DOCUMENT_MANAGEMENT_AVAILABLE = False
+    DocumentFile = None
+
 
 class EventContactForm(forms.ModelForm):
     """Form for individual event contact"""
@@ -68,7 +76,7 @@ class EventForm(forms.ModelForm):
 
     class Meta:
         model = Event
-        fields = ['title', 'short_description', 'category', 'start_datetime', 'end_datetime', 'formatted_description', 'registration_status', 'registration_open_datetime', 'registrant_list_visibility', 'allowed_member_types']
+        fields = ['title', 'short_description', 'category', 'start_datetime', 'end_datetime', 'formatted_description', 'registration_status', 'registration_open_datetime', 'registrant_list_visibility', 'allowed_member_types', 'linked_documents']
         widgets = {
             'title': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Event Title'}),
             'short_description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Brief description'}),
@@ -79,6 +87,7 @@ class EventForm(forms.ModelForm):
             'registration_open_datetime': forms.DateTimeInput(attrs={'class': 'form-control', 'type': 'datetime-local'}),
             'registrant_list_visibility': forms.Select(attrs={'class': 'form-control'}),
             'allowed_member_types': forms.CheckboxSelectMultiple(attrs={'class': 'form-check-input'}),
+            'linked_documents': forms.SelectMultiple(attrs={'class': 'form-select', 'size': '8', 'style': 'min-height: 200px;'}),
         }
         labels = {
             'title': 'Event Title',
@@ -91,10 +100,33 @@ class EventForm(forms.ModelForm):
             'registration_open_datetime': 'Registration Open Date/Time',
             'registrant_list_visibility': 'Registrant List Visibility',
             'allowed_member_types': 'Allowed Member Types',
+            'linked_documents': 'Linked Documents',
         }
         help_texts = {
             'allowed_member_types': 'Select which member types can register for this event. Leave empty to allow all types.',
+            'linked_documents': 'Select documents to link to this event. Use "Insert Document Link" button below to add links to the description.',
         }
+    
+    def __init__(self, *args, **kwargs):
+        self.user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
+        
+        # Only show linked_documents field if DocumentManagement is available
+        if not DOCUMENT_MANAGEMENT_AVAILABLE:
+            if 'linked_documents' in self.fields:
+                del self.fields['linked_documents']
+        else:
+            # Filter documents to only show those the user can view
+            if self.user and self.user.is_authenticated:
+                from DocumentManagement.utils import get_accessible_folders
+                accessible_folders = get_accessible_folders(self.user, permission_type='view')
+                accessible_documents = DocumentFile.objects.filter(folder__in=accessible_folders).select_related('folder').order_by('folder__name', 'name')
+                self.fields['linked_documents'].queryset = accessible_documents
+            else:
+                self.fields['linked_documents'].queryset = DocumentFile.objects.none()
+            
+            # Make it optional
+            self.fields['linked_documents'].required = False
 
     def clean(self):
         cleaned_data = super().clean()

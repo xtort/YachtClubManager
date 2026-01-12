@@ -1,0 +1,35 @@
+{% extends 'ManagementApp/base_management.html' %}
+
+{% block management_content %}
+<div class="card section-card">
+    <div class="section-header" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+        <h4 class="mb-0"><i class="bi bi-exclamation-triangle"></i> Delete File</h4>
+    </div>
+    <div class="section-body">
+        <div class="alert alert-warning">
+            <i class="bi bi-exclamation-triangle"></i> <strong>Warning:</strong> This action cannot be undone!
+        </div>
+        
+        <p>Are you sure you want to delete the file <strong>"{{ object.name }}"</strong>?</p>
+        
+        <div class="alert alert-info">
+            <strong>File Information:</strong><br>
+            Location: {{ object.folder.get_full_path }}<br>
+            Size: {{ object.get_file_size_display }}
+        </div>
+        
+        <form method="post">
+            {% csrf_token %}
+            <div class="d-flex justify-content-between">
+                <a href="{% url 'document_management:file_detail' object.pk %}" class="btn btn-secondary">
+                    <i class="bi bi-x-circle"></i> Cancel
+                </a>
+                <button type="submit" class="btn btn-danger">
+                    <i class="bi bi-trash"></i> Yes, Delete File
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
