@@ -28,7 +28,7 @@ load_dotenv(BASE_DIR / '.env')
 SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-jqy9)fz)vwf40q!9ry(^8t0np%0tm_w4r!@ptq!pis9lwv331c')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.getenv('DEBUG', 'False').lower() == 'false'
+DEBUG = os.getenv("DEBUG", "False").lower() == "true"
 
 # Add CSRF Trusted Origins
 CSRF_TRUSTED_ORIGINS = [
