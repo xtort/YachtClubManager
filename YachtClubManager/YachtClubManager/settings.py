@@ -34,13 +34,9 @@ ENVIRONMENT = os.getenv('ENVIRONMENT', 'development').lower()
 SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-jqy9)fz)vwf40q!9ry(^8t0np%0tm_w4r!@ptq!pis9lwv331c')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-<<<<<<< HEAD
-DEBUG = os.getenv("DEBUG", "False").lower() == "true"
-=======
 # Fixed: DEBUG should be True when env var is 'True', False otherwise
 DEBUG_ENV = os.getenv('DEBUG', 'True' if ENVIRONMENT == 'development' else 'False')
 DEBUG = DEBUG_ENV.lower() in ('true', '1', 'yes', 'on')
->>>>>>> 43180d5eeaddfb6e99ac5a7415c587105c7daeea
 
 # Add CSRF Trusted Origins
 CSRF_TRUSTED_ORIGINS = [
