@@ -100,14 +100,6 @@
                             </ul>
                         </li>
                     {% endif %}
-                    {% if user|is_admin %}
-                        <!-- Admin link to Django admin panel opens in a new tab-->
-                        <li class="nav-item">
-                            <a class="nav-link" href="{% url 'admin:index' %}" target="_blank">
-                                <i class="bi bi-gear"></i> Admin
-                            </a>
-                        </li>
-                    {% endif %}
                 </ul>
                 <ul class="navbar-nav">
                     {% if user.is_authenticated %}
