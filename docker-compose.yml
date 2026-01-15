@@ -28,7 +28,8 @@ services:
     volumes:
       - ./YachtClubManager:/app
       - ./docker-entrypoint.sh:/app/docker-entrypoint.sh:ro
-      - static_volume:/app/staticfiles
+      #- static_volume:/app/staticfiles
+      - ./staticfiles:/app/staticfiles
       # Media files are stored in ./YachtClubManager/media (via the ./YachtClubManager:/app mount above)
       # Removed media_volume mount to use local filesystem instead
     ports:
