@@ -67,6 +67,17 @@
                         </td>
                         <td>{{ user.primary_phone_number|default:"—" }}</td>
                         <td>
+                            {% if user.parent_member %}
+                                <span class="badge bg-secondary">
+                                    {{ user.relationship_type|default:"Child" }}
+                                </span>
+                            {% elif user.dependent_members.exists %}
+                                <span class="badge bg-primary">Parent</span>
+                            {% else %}
+                                <span class="text-muted">—</span>
+                            {% endif %}
+                        </td>
+                        <td>
                             {% if user.is_active %}
                                 <span class="badge bg-success">Active</span>
                             {% else %}
