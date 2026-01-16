@@ -45,7 +45,7 @@
                     <th>Email</th>
                     <th>Role</th>
                     <th>Phone</th>
-                    <th>Parent/Child</th>
+                    <th>Relationships</th>
                     <th>Status</th>
                     <th>Last Login</th>
                     <th>Actions</th>
@@ -68,11 +68,14 @@
                         <td>{{ user.primary_phone_number|default:"—" }}</td>
                         <td>
                             {% if user.parent_member %}
-                                <span class="badge bg-secondary">
-                                    {{ user.relationship_type|default:"Child" }}
-                                </span>
+                                <span class="badge bg-secondary">Child</span><br>
                             {% elif user.dependent_members.exists %}
-                                <span class="badge bg-primary">Parent</span>
+                                <span class="badge bg-primary">Parent</span><br>
+                                <span class="text-muted small">
+                                    {% for dependent in user.dependent_members.all %}
+                                        {{ dependent.get_full_name|default:dependent.email }}{% if not forloop.last %}, {% endif %}
+                                    {% endfor %}
+                                </span>
                             {% else %}
                                 <span class="text-muted">—</span>
                             {% endif %}
