@@ -21,7 +21,16 @@
                     {% endif %}
 
                     <div class="row">
-                        <div class="col-md-6 mb-3">
+                        <div class="col-md-3 mb-3">
+                            <label for="{{ form.salutation.id_for_label }}" class="form-label">
+                                {{ form.salutation.label }}
+                            </label>
+                            {{ form.salutation }}
+                            {% if form.salutation.errors %}
+                                <div class="text-danger small">{{ form.salutation.errors }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-5 mb-3">
                             <label for="{{ form.first_name.id_for_label }}" class="form-label">
                                 {{ form.first_name.label }}
                             </label>
@@ -30,7 +39,7 @@
                                 <div class="text-danger small">{{ form.first_name.errors }}</div>
                             {% endif %}
                         </div>
-                        <div class="col-md-6 mb-3">
+                        <div class="col-md-4 mb-3">
                             <label for="{{ form.last_name.id_for_label }}" class="form-label">
                                 {{ form.last_name.label }}
                             </label>
@@ -39,6 +48,19 @@
                                 <div class="text-danger small">{{ form.last_name.errors }}</div>
                             {% endif %}
                         </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="{{ form.date_of_birth.id_for_label }}" class="form-label">
+                            {{ form.date_of_birth.label }}
+                        </label>
+                        {{ form.date_of_birth }}
+                        {% if form.date_of_birth.help_text %}
+                            <small class="form-text text-muted">{{ form.date_of_birth.help_text }}</small>
+                        {% endif %}
+                        {% if form.date_of_birth.errors %}
+                            <div class="text-danger small">{{ form.date_of_birth.errors }}</div>
+                        {% endif %}
                     </div>
 
                     <div class="mb-3">

@@ -278,11 +278,16 @@ class ClubUserCreateForm(forms.ModelForm):
 
     class Meta:
         model = ClubUser
-        fields = ['email', 'first_name', 'last_name', 'primary_phone_number', 'role', 'member_types', 'is_active']
+        fields = [
+            'salutation', 'first_name', 'last_name', 'date_of_birth',
+            'email', 'primary_phone_number', 'role', 'member_types', 'is_active'
+        ]
         widgets = {
+            'salutation': forms.Select(attrs={'class': 'form-control'}),
             'email': forms.EmailInput(attrs={'class': 'form-control'}),
             'first_name': forms.TextInput(attrs={'class': 'form-control'}),
             'last_name': forms.TextInput(attrs={'class': 'form-control'}),
+            'date_of_birth': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}, format='%Y-%m-%d'),
             'primary_phone_number': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '+1234567890'}),
             'role': forms.Select(attrs={'class': 'form-control'}),
             'member_types': forms.SelectMultiple(attrs={'class': 'form-control', 'size': '5'}),
@@ -290,8 +295,10 @@ class ClubUserCreateForm(forms.ModelForm):
         }
         labels = {
             'email': 'Email Address',
+            'salutation': 'Salutation',
             'first_name': 'First Name',
             'last_name': 'Last Name',
+            'date_of_birth': 'Date of Birth',
             'primary_phone_number': 'Primary Phone Number',
             'role': 'Role',
             'member_types': 'Member Types',
@@ -299,10 +306,12 @@ class ClubUserCreateForm(forms.ModelForm):
         }
         help_texts = {
             'member_types': 'Select at least one member type. Hold Ctrl/Cmd to select multiple.',
+            'date_of_birth': 'Year is stored but will not be displayed publicly.',
         }
     
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.fields['salutation'].choices = SALUTATION_CHOICES
         # Set queryset for parent member - only show members who can be parents
         parent_member_types = MemberType.objects.filter(can_be_parent=True, is_active=True)
         self.fields['parent_member'].queryset = ClubUser.objects.filter(
@@ -421,11 +430,16 @@ class ClubUserUpdateForm(forms.ModelForm):
 
     class Meta:
         model = ClubUser
-        fields = ['email', 'first_name', 'last_name', 'primary_phone_number', 'role', 'member_types', 'is_active']
+        fields = [
+            'salutation', 'first_name', 'last_name', 'date_of_birth',
+            'email', 'primary_phone_number', 'role', 'member_types', 'is_active'
+        ]
         widgets = {
+            'salutation': forms.Select(attrs={'class': 'form-control'}),
             'email': forms.EmailInput(attrs={'class': 'form-control'}),
             'first_name': forms.TextInput(attrs={'class': 'form-control'}),
             'last_name': forms.TextInput(attrs={'class': 'form-control'}),
+            'date_of_birth': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}, format='%Y-%m-%d'),
             'primary_phone_number': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '+1234567890'}),
             'role': forms.Select(attrs={'class': 'form-control'}),
             'member_types': forms.SelectMultiple(attrs={'class': 'form-control', 'size': '5'}),
@@ -433,8 +447,10 @@ class ClubUserUpdateForm(forms.ModelForm):
         }
         labels = {
             'email': 'Email Address',
+            'salutation': 'Salutation',
             'first_name': 'First Name',
             'last_name': 'Last Name',
+            'date_of_birth': 'Date of Birth',
             'primary_phone_number': 'Primary Phone Number',
             'role': 'Role',
             'member_types': 'Member Types',
@@ -442,10 +458,12 @@ class ClubUserUpdateForm(forms.ModelForm):
         }
         help_texts = {
             'member_types': 'Select at least one member type. Hold Ctrl/Cmd to select multiple.',
+            'date_of_birth': 'Year is stored but will not be displayed publicly.',
         }
     
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.fields['salutation'].choices = SALUTATION_CHOICES
         # Set queryset for parent member - only show members who can be parents
         parent_member_types = MemberType.objects.filter(can_be_parent=True, is_active=True)
         # Exclude self from parent options
